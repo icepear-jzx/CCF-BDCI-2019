@@ -11,8 +11,6 @@ class DataParser:
     2)  Divides the whole data set into training set and testing set.
         The training and testing set will be identically destributed.
     """
-
-
     def __init__(self, filename, numeric_cols=[], ignore_cols=[], dense=False, label_name=None):
         """
         : param filename:       The file to be processed.
@@ -130,10 +128,11 @@ class DataParser:
         for the fucking competition doesn't offer a testing set.
         """
         train_num = int(self.record_num * train_ratio)
-        # a random permutation
+        # Create a random permutation, and re-arrange the data with same order.
         permu = np.random.permutation(self.record_num)
         self.sparse_data = (self.sparse_data[0][permu], self.sparse_data[1][permu])
         self.labels = self.labels[permu]
+
         self.Xi_train, self.Xv_train, self.y_train = \
             self.sparse_data[0][:train_num], self.sparse_data[1][:train_num], self.labels[:train_num]
         self.Xi_test, self.Xv_test, self.y_test = \

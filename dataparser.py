@@ -11,6 +11,8 @@ class DataParser:
     2)  Divides the whole data set into training set and testing set.
         The training and testing set will be identically destributed.
     """
+
+
     def __init__(self, filename, numeric_cols=[], ignore_cols=[], dense=False, label_name=None):
         """
         : param filename:       The file to be processed.

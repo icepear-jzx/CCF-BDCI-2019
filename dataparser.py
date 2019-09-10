@@ -51,7 +51,7 @@ class DataParser:
         field_count = 0
 
         for col in df.columns:
-            if col in self.ignore_cols:
+            if col in self.ignore_cols or col == self.label_name:
                 continue
 
             # Arrange a single position for numeric features
@@ -84,9 +84,9 @@ class DataParser:
                     Xi is a 2d array of feature indices of each sample in the dataset.
                     Xv is a 2d array of feature values of each sample in the dataset.
         """
-        dfi = pd.read_csv(filename)
-        if self.lable_name is not None:
-            y = dfi[self.lable_name].values
+        dfi = pd.read_csv(self.filename)
+        if self.label_name is not None:
+            y = dfi[self.label_name].values
             self.labels = y
         
         dfv = dfi.copy()
@@ -112,7 +112,7 @@ class DataParser:
             col_ix = np.reshape(Xi, [-1])
             row_ix = np.repeat(np.arange(0, self.record_num), self.field_dim)
             data = np.reshape(Xv, [-1])
-            self.dense_data = coo_matrix((data, (row_ix, col_ix)), [self.record_num, self.feat_dim])
+            self.dense_data = coo_matrix((data, (row_ix, col_ix)), [self.record_num, self.feat_dim]).toarray()
             if self.label_name != None:
                 return self.dense_data, self.labels
             else:
@@ -127,7 +127,7 @@ class DataParser:
     def gen_train_test(self, train_ratio=0.95):
         """
         Generate itentically distributed training set and testing set,
-        for the dammit competition doesn't offer a testing set.
+        for the fucking competition doesn't offer a testing set.
         """
         train_num = int(self.record_num * train_ratio)
         # a random permutation
@@ -136,7 +136,7 @@ class DataParser:
         self.labels = self.labels[permu]
         self.Xi_train, self.Xv_train, self.y_train = \
             self.sparse_data[0][:train_num], self.sparse_data[1][:train_num], self.labels[:train_num]
-        self.Xi_test, self.Xv_test, self.y_tes = \
+        self.Xi_test, self.Xv_test, self.y_test = \
             self.sparse_data[0][train_num:], self.sparse_data[1][train_num:], self.labels[train_num:]
 
         if self.dense:

@@ -17,7 +17,7 @@ This model performs badly. It has a big error and converges slowly and unstably.
 ## fm.py
 *update 11/9*
 ### description
-This is a very simple implementation of **Factorization Machine** model, a very useful and powerful method to deal with one-hot vectors. It's wildly used in recommendation systems. Check [this](https://blog.csdn.net/google19890102/article/details/45532745) for more details.
+This is a very simple implementation of **Factorization Machine** model, a very useful and powerful method to deal with one-hot vectors. It's wildly used in recommendation systems. Check [this](https://blog.csdn.net/songbinxu/article/details/79662665) for more details.
 ### usage
 ```shell
 python fm.py

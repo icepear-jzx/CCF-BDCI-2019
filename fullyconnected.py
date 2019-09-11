@@ -6,7 +6,7 @@ import numpy as np
 class MLP:
     def __init__(self, input_dim, output_dim=1, layers=[128, 256, 64, 32], 
                  act=tf.nn.relu, drop=True, drop_keep=[0.5]*4, learning_rate=0.01, l2_factor=0.01, 
-                 batch_size=32, epochs=10, eval_interval=50):
+                 batch_size=16, epochs=100, eval_interval=50):
         if drop:
             assert len(layers) == len(drop_keep), 'Drop keeping probilities don\'t match laysers number.'
  
@@ -61,40 +61,18 @@ class MLP:
         return weights
 
 
-    def train(self, data, labels):
-        assert len(data) == len(labels)
-        for epoch in range(self.epochs):
-            for i in range(0, len(data), self.batch_size):
-                feed_dict = {
-                    self.x: data[i:i + self.batch_size], 
-                    self.y_real: labels[i:i + self.batch_size], 
-                }
-                for j in range(len(self.drop_keep)):
-                    feed_dict[self.drop_keep_in[j]] = self.drop_keep[j]
-                _, error = self.sess.run([self.train_op, self.rmse], feed_dict)
-                if i%self.eval_interval == 0:
-                    print('In epoch %d, batch step %d, rmse: %.3f'%(epoch + 1, i + 1, error))
 
-
-    def eval(self, data, labels):
-        assert len(data) == len(labels)
-        feed_dict = {
-            self.x: data,
-            self.y_real: labels
-        }
-        for j in range(len(self.drop_keep)):
-            feed_dict[self.drop_keep_in[j]] = 0
-        error = self.sess.run(self.rmse, feed_dict)
-        print('evaluate: rmse: %.3f'%(error))
 
 
 
 if __name__ == '__main__':
-    dp = DataParser('Train/train_sales_data.csv', [], label_name='salesVolume', dense=True)
+    dp = DataParser('Train/train_sales_data.csv', 
+        ignore_cols=['province'], label_name='salesVolume', dense=True)
     dp.gen_feat_dict()
     dp.gen_vectors()
     data_train, y_train, data_test, y_test = dp.gen_train_test()
+    sep_test_data = dp.gen_fine_grained_test(partial_cols=['adcode', 'model'])
 
     mlp = MLP(dp.feat_dim)
     mlp.train(data_train, y_train)
-    mlp.eval(data_test, y_test)
+    mlp.get_score(sep_test_data)

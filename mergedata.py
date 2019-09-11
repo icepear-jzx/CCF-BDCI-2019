@@ -44,4 +44,29 @@ def test_merge_data():
     with open('Train/train_user_reply_data.csv', 'r') as f:
         user_reply_data = pd.read_csv(f)
     
-    print()
+    print('Start test...')
+
+    for index, row in all_data.iterrows():
+
+        print('Test:', index)
+
+        match_col = ['province', 'adcode', 'model', 'regYear', 'regMonth']
+        test_col = ['popularity']
+        match_row = search_data
+        for col in match_col:
+            match_row = match_row[match_row[col] == row[col]]
+        if (match_row[test_col] != row[test_col]).any().any():
+            print('Error!!!')
+            return False
+
+        match_col = ['model','regYear','regMonth']
+        test_col = ['carCommentVolum', 'newsReplyVolum']
+        match_row = user_reply_data
+        for col in match_col:
+            match_row = match_row[match_row[col] == row[col]]
+        if (match_row[test_col] != row[test_col]).any().any():
+            print('Error!!!')
+            return False
+    
+    print('Success.')
+    return True

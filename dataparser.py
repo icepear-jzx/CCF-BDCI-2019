@@ -166,7 +166,6 @@ class DataParser:
             assert not col in self.numeric_cols, 'Partial features should not be numeric.'
 
         data_indices = []
-
         def helper(vec_pos, cols):
             if len(cols) == 0:
                 indices = [self.data_test[:, vec_pos[i]] == 1 for i in range(len(vec_pos))]

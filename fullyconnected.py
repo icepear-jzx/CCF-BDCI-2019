@@ -6,7 +6,7 @@ import numpy as np
 class MLP:
     def __init__(self, input_dim, output_dim=1, layers=[128, 256, 64, 32], 
                  act=tf.nn.relu, drop=True, drop_keep=[0.5]*4, learning_rate=0.01, l2_factor=0.01, 
-                 batch_size=16, epochs=100, eval_interval=50):
+                 batch_size=100, epochs=100, eval_interval=50):
         if drop:
             assert len(layers) == len(drop_keep), 'Drop keeping probilities don\'t match laysers number.'
  
@@ -61,8 +61,44 @@ class MLP:
         return weights
 
 
+    def train(self, data, labels):
+        assert len(data) == len(labels)
+        for epoch in range(self.epochs):
+            permu = np.random.permutation(len(data))
+            data = data[permu]
+            labels = labels[permu]
+
+            errors = []
+            for i in range(0, len(data), self.batch_size):
+                feed_dict = {
+                    self.x: data[i:i + self.batch_size], 
+                    self.y_real: labels[i:i + self.batch_size], 
+                }
+                for j in range(len(self.drop_keep)):
+                    feed_dict[self.drop_keep_in[j]] = self.drop_keep[j]
+                _, error = self.sess.run([self.train_op, self.rmse], feed_dict)
+            print('In epoch %d, rmse: %.3f'%(epoch + 1, error))
 
 
+    def eval(self, data, labels):
+        assert len(data) == len(labels)
+        feed_dict = {
+            self.x: data,
+            self.y_real: labels
+        }
+        for j in range(len(self.drop_keep)):
+            feed_dict[self.drop_keep_in[j]] = 1
+        error = self.sess.run(self.rmse, feed_dict)
+        return error
+
+    
+    def get_score(self, test_data_list):
+        nrmse = []
+        for x, y in test_data_list:
+            if len(x) != 0:
+                error = self.eval(x, y)
+                nrmse.append(error/np.mean(y))
+        print("Your score is %.3f!"%(1 - np.mean(nrmse)))
 
 
 if __name__ == '__main__':

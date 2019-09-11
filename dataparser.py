@@ -84,7 +84,7 @@ class DataParser:
                     Xi is a 2d array of feature indices of each sample in the dataset.
                     Xv is a 2d array of feature values of each sample in the dataset.
         """
-        assert not self.feat_dict == None, 'A feature dict must be generated before using this function.'
+        assert not self.feat_dict == None, 'gen_feat_dict() must be called before using this function.'
 
         dfi = pd.read_csv(self.filename)
         if self.label_name is not None:
@@ -131,7 +131,7 @@ class DataParser:
         Generate itentically distributed training set and testing set,
         for the fucking competition doesn't offer a testing set.
         """
-        assert not self.feat_dict == None, 'A feature dictionary must be generated before using this function.'
+        assert not self.feat_dict == None, 'gen_feat_dict() must be called before using this function.'
         assert not self.sparse_data == None, 'gen_vectors() must be called before using this function.'
 
         train_num = int(self.record_num * train_ratio)

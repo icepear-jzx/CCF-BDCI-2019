@@ -1,22 +1,18 @@
 import numpy as np
 import tensorflow as tf
 from dataparser import *
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.metrics import roc_auc_score
-from time import time
-from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
 import os
 
 # Comment this line to use gpu.
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-class DFM(BaseEstimator, TransformerMixin):
+class DFM:
     def __init__(self, feature_size, field_size, 
-                 embedding_size=8, dropout_fm=[1.0, 1.0],
+                 embedding_size=40, dropout_fm=[1.0, 1.0],
                  deep_layers=[32, 32], dropout_deep=[0.5, 0.5, 0.5], 
                  deep_layers_activation=tf.nn.relu,
-                 epochs=100, batch_size=256, 
-                 learning_rate=0.01,
+                 epochs=100, batch_size=1000, 
+                 learning_rate=0.1,
                  use_fm=True, use_deep=True, l2_reg=0.01):
         assert use_fm or use_deep, 'At least one of use_fm and use_deep should be True.'
 
@@ -173,6 +169,28 @@ class DFM(BaseEstimator, TransformerMixin):
             print('episode %d, rmse: %.3f'%(epoch, error))
             
 
+    def eval(self, Xi, Xv, Y):
+        assert len(Xi) == len(Xv) == len(Y)
+        feed_dict = {
+            self.feat_index: Xi,
+            self.feat_value: Xv,
+            self.label: np.reshape(Y, [-1, 1]),
+            self.dropout_keep_fm: np.ones([len(self.dropout_fm)]),
+            self.dropout_keep_deep: np.ones([len(self.dropout_deep)])
+        }
+        error = self.sess.run(self.rmse, feed_dict)
+        return error
+
+    
+    def get_score(self, test_data_list):
+        nrmse = []
+        for Xi, Xv, Y in test_data_list:
+            if len(Xi) != 0:
+                error = self.eval(Xi, Xv, Y)
+                nrmse.append(error/np.mean(Y))
+        print("Your score is %.3f!"%(1 - np.mean(nrmse)))
+
+
 
 if __name__ == '__main__':
     dp = DataParser('Train/train_sales_data.csv', 
@@ -180,6 +198,8 @@ if __name__ == '__main__':
     dp.gen_feat_dict()
     dp.gen_vectors()
     Xi, Xv, Y, _, _, _ = dp.gen_train_test()
+    sep_test_data = dp.gen_fine_grained_test(partial_cols=['adcode', 'model'])
 
     fm = DFM(dp.feat_dim, dp.field_dim)
     fm.train(Xi, Xv, Y)
+    fm.get_score(sep_test_data)

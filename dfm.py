@@ -8,7 +8,7 @@ from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
 import os
 
 # Comment this line to use gpu.
-os.environ['CUDA_VIDIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 class DFM(BaseEstimator, TransformerMixin):
     def __init__(self, feature_size, field_size, 

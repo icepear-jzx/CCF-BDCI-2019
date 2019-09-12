@@ -1,6 +1,10 @@
 from dataparser import *
 import tensorflow as tf
 import numpy as np
+import os
+
+# Comment this line to use gpu.
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 class MLP:

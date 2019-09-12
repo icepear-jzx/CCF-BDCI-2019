@@ -157,18 +157,19 @@ class DataParser:
         """
         For every feature combination in partial_cols, generate a separate test set.
         """
-        assert self.dense, 'This function only for dense representation yet. Sparse version will be updated soon.'
-        try:
-            self.data_test
-        except NameError:
-            print('gen_test_data() must be called before using this function.')
+        # assert self.dense, 'This function only for dense representation yet. Sparse version will be updated soon.'
+        assert not self.sparse_data == None, 'gen_test_data() must be called before using this function.'
         for col in partial_cols:
             assert not col in self.numeric_cols, 'Partial features should not be numeric.'
 
         data_indices = []
         def helper(vec_pos, cols):
             if len(cols) == 0:
-                indices = [self.data_test[:, vec_pos[i]] == 1 for i in range(len(vec_pos))]
+                if self.dense:
+                    indices = [self.data_test[:, vec_pos[i]] == 1 for i in range(len(vec_pos))]
+                else:
+                    indices = [np.array([vec_pos[i] in self.Xi_test[j] for j in range(len(self.Xi_test))])
+                                                                       for i in range(len(vec_pos))]
                 index = indices[0]
                 for i in range(1, len(indices)):
                     index *= indices[i]
@@ -179,4 +180,7 @@ class DataParser:
                 helper(vec_pos + [pos], cols[1:])
         
         helper([], partial_cols)
-        return [(self.data_test[index], self.y_test[index]) for index in data_indices]
+        if self.dense:
+            return [(self.data_test[index], self.y_test[index]) for index in data_indices]
+        else:
+            return [(self.Xi_test[index], self.Xv_test[index], self.y_test[index]) for index in data_indices]

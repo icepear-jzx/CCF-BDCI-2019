@@ -1,9 +1,13 @@
 import numpy as np
 import tensorflow as tf
 from dataparser import *
+import os
+
+# Comment this line to use gpu.
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 class FM:
-    def __init__(self, input_dim, latent_dim=10, l2_factor=1, learning_rate=0.01,
+    def __init__(self, input_dim, latent_dim=20, l2_factor=1, learning_rate=0.01,
                  epochs=1000, batch_size=1000):
         self.input_dim = input_dim
         self.latent_dim = latent_dim

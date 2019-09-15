@@ -1,10 +1,14 @@
 from dataparser import *
 import tensorflow as tf
 import numpy as np
+import os
+
+# Comment this line to use gpu.
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 class MLP:
-    def __init__(self, input_dim, output_dim=1, layers=[128, 256, 64, 32], 
+    def __init__(self, input_dim, output_dim=1, layers=[32, 32, 32, 32], 
                  act=tf.nn.relu, drop=True, drop_keep=[0.5]*4, learning_rate=0.01, l2_factor=0.01, 
                  batch_size=100, epochs=100, eval_interval=50):
         if drop:

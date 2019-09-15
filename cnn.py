@@ -44,11 +44,11 @@ model.add(layers.Conv2D(input_shape=(x_train.shape[1], x_train.shape[2], x_train
 
 model.add(layers.MaxPool2D(pool_size=(2,2)))
 model.add(layers.Flatten())
-model.add(layers.Dense(32, activation='relu'))
-model.add(layers.Dense(1, activation='softmax'))
+model.add(layers.Dense(32, use_bias=True, activation='relu'))
+model.add(layers.Dense(4, use_bias=True, activation='softmax'))
 
 model.compile(optimizer=keras.optimizers.Adam(),
-    loss=keras.losses.SparseCategoricalCrossentropy(),
+    loss=keras.losses.MSE,
     metrics=['accuracy'])
 model.summary()
 
@@ -58,3 +58,5 @@ plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
 plt.legend(['training', 'valivation'], loc='upper left')
 plt.show()
+
+res = model.evaluate(x_train, y_train)

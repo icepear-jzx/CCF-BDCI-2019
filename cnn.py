@@ -6,6 +6,11 @@ import pandas as pd
 import numpy as np
 
 
+def standardization(data):
+    mu = np.mean(data, axis=0)
+    sigma = np.std(data, axis=0)
+    return (data - mu) / sigma, mu, sigma
+
 with open('Train/train_all_data.csv', 'r') as f:
     raw_data = pd.read_csv(f)
 
@@ -33,7 +38,9 @@ for model in set(input_raw_data.model):
         Y_list.append(Y_ir)
 
 x_train = np.vstack(X_list)
+x_train, _, _ = standardization(x_train)
 y_train = np.vstack(Y_list)
+y_train, mu, sigma = standardization(y_train)
 print(x_train.shape, y_train.shape)
 
 model = keras.Sequential()
@@ -46,11 +53,11 @@ model.add(layers.Flatten())
 model.add(layers.Dense(32, use_bias=True, activation='relu'))
 model.add(layers.Dense(4, use_bias=True, activation='softmax'))
 
-model.compile(optimizer=keras.optimizers.SGD(0.1),
+model.compile(optimizer=keras.optimizers.Adam(0.01),
     loss=keras.losses.MSE,
     metrics=['mse'])
 model.summary()
 
-history = model.fit(x_train, y_train, batch_size=64, epochs=5, validation_split=0.1)
+history = model.fit(x_train, y_train, batch_size=64, epochs=50)
 
 res = model.evaluate(x_train, y_train)

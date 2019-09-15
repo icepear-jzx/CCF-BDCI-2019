@@ -13,7 +13,7 @@ class DFM:
                  embedding_size=40, dropout_fm=[1.0, 1.0],
                  deep_layers=[32, 32], dropout_deep=[0.5, 0.5, 0.5], 
                  deep_layers_activation=tf.nn.relu,
-                 epochs=1, batch_size=1000, 
+                 epochs=50, batch_size=1000, 
                  learning_rate=0.1,
                  use_fm=True, use_deep=True, l2_reg=0.01):
         assert use_fm or use_deep, 'At least one of use_fm and use_deep should be True.'
@@ -232,6 +232,7 @@ def predict():
     dfm.train(Xi, Xv, Y)
 
     y = dfm.predict(Xi_eval, Xv_eval)
+    y = process_negative(y)
     write_results('results/dfm', y)
     
 

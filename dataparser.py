@@ -223,6 +223,13 @@ def write_results(filename, y):
     fr = open(filename, 'w')
     fr.write('id,forecastVolum\n')
     for i in range(len(y)):
-        fr.write('%d,%d\n'%(i + 1, int(y[i])))
+        fr.write('%d,%d\n'%(i + 1, int(max(y[i], 0))))
     fr.close()
-        
+
+
+def process_negative(y):
+    y = np.reshape(y, [-1])
+    mean = np.mean(y[y >= 0])
+    for i in range(len(y)):
+        if y[i] < 0: y[i] = mean
+    return y

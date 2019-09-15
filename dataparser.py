@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.sparse import coo_matrix
+import time
 
 class DataParser:
     """
@@ -13,15 +14,18 @@ class DataParser:
     """
 
 
-    def __init__(self, filename, numeric_cols=[], ignore_cols=[], dense=False, label_name=None):
+    def __init__(self, filename, pred_filename=None,
+                 numeric_cols=[], ignore_cols=[], dense=False, label_name=None):
         """
-        : param filename:       The file to be processed.
+        : param filename:       The file to be processed(training set).
+        : param pred_filename:  The file to be predicted.
         : param numeric_cols:   A list of names of numeric features. Other features will be treated as catalogic.
         : param ignore_cols:    A list of names of features to be ignored.
         : param dense:          Determine generating a dense matrix or sparse a one.
         : param label_name:     If the label column is in the file, specify it.
         """
         self.filename = filename
+        self.pred_filename = pred_filename
         self.numeric_cols = numeric_cols
         self.ignore_cols = ignore_cols
         self.dense = dense
@@ -47,6 +51,19 @@ class DataParser:
         """
         self.feat_dict = {}
         df = pd.read_csv(self.filename)
+        
+        # If evaluating data set is set, combine it with training set
+        if self.pred_filename != None:
+            pred_df = pd.read_csv(self.pred_filename)
+            common_features = set(df.columns) & set(pred_df.columns)
+            for col in df.columns:
+                if col not in common_features:
+                    df.drop(col, axis=1, inplace=True)
+            for col in pred_df.columns:
+                if col not in common_features:
+                    pred_df.drop(col, axis=1, inplace=True)
+            df = pd.concat([df, pred_df])
+            
         feat_count = 0
         field_count = 0
 
@@ -69,13 +86,19 @@ class DataParser:
         self.feat_dim = feat_count
         self.field_dim = field_count
         return self.feat_dict
+
+
+    def set_feat_dict(self, fd):
+        self.feat_dict = fd
         
 
-    def gen_vectors(self):
+    def gen_vectors(self, filename=None):
         """
         Generate vector representation of .csv files.
         A feature dict must be generated before.
 
+        : param filename: if filename is set, process this file;
+                          else process self.filename.
         : return: if dense == True:
                     A matrix concated with one-hot vector of catalogic features 
                     and numeric vector of numeric features.
@@ -84,12 +107,18 @@ class DataParser:
                     Xi is a 2d array of feature indices of each sample in the dataset.
                     Xv is a 2d array of feature values of each sample in the dataset.
         """
-        assert not self.feat_dict == None, 'gen_feat_dict() must be called before using this function.'
+        assert(not self.feat_dict == None, 
+            'gen_feat_dict() or set_feat_dict() must be called before using this function.')
 
-        dfi = pd.read_csv(self.filename)
-        if self.label_name is not None:
+        if filename == None:
+            dfi = pd.read_csv(self.filename)
+        else:
+            dfi = pd.read_csv(filename)
+        if (self.label_name is not None) and (self.label_name in dfi.columns):
             y = dfi[self.label_name].values
             self.labels = y
+        else:
+            y = None
         
         dfv = dfi.copy()
         for col in dfi.columns:
@@ -116,7 +145,7 @@ class DataParser:
             data = np.reshape(Xv, [-1])
             self.dense_data = coo_matrix((data, (row_ix, col_ix)), [self.record_num, self.feat_dim]).toarray()
             if self.label_name != None:
-                return self.dense_data, self.labels
+                return self.dense_data, y
             else:
                 return self.dense_data
         else:
@@ -184,3 +213,16 @@ class DataParser:
             return [(self.data_test[index], self.y_test[index]) for index in data_indices]
         else:
             return [(self.Xi_test[index], self.Xv_test[index], self.y_test[index]) for index in data_indices]
+
+
+def write_results(filename, y):
+    time_str = time.strftime('%m-%d-%H-%M',time.localtime(time.time()))
+    filename = '%s-%s'%(filename, time_str)
+
+    y = np.reshape(y, [-1])
+    fr = open(filename, 'w')
+    fr.write('id,forecastVolum\n')
+    for i in range(len(y)):
+        fr.write('%d,%d\n'%(i + 1, int(y[i])))
+    fr.close()
+        

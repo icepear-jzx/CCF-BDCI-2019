@@ -5,6 +5,11 @@ import pandas as pd
 import numpy as np
 
 
+def standardization(data):
+    mu = np.mean(data, axis=0)
+    sigma = np.std(data, axis=0)
+    return (data - mu) / sigma, mu, sigma
+
 with open('Train/train_all_data.csv', 'r') as f:
     raw_data = pd.read_csv(f)
 
@@ -30,30 +35,36 @@ for model in set(input_raw_data.model):
         # print('Y_ir:\n', Y_ir)
         X_list.append(X_ir)
         Y_list.append(Y_ir)
+        # input()
 
 x_train = np.vstack(X_list)
+x_train, _, _ = standardization(x_train)
 y_train = np.vstack(Y_list)
+y_train, mu, sigma = standardization(y_train)
 print(x_train.shape, y_train.shape)
 
 # 构建模型
 
 model = keras.Sequential([
     layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal', input_shape=(23,)),
-    layers.Dense(64, activation='sigmoid', kernel_initializer='he_normal'),
     layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal'),
     layers.Dense(1)
 ])
 
 # 配置模型
-model.compile(optimizer=keras.optimizers.Adam(),
+model.compile(optimizer=keras.optimizers.Adam(0.001),
              loss='mean_squared_error',
              metrics=['mse'])
 model.summary()
 
 # 训练
-model.fit(x_train, y_train, batch_size=64, epochs=500, validation_split=0.1, verbose=1)
+model.fit(x_train, y_train, batch_size=256, epochs=500)
 
-# result = model.evaluate(x_test, y_test)
+result = model.predict(x_train)
+result = result * sigma + mu
+y_train = y_train * sigma + mu
 
 # print(model.metrics_names)
-# print(result)
+print(y_train)
+print(result)
+print(((y_train - result) ** 2).mean() ** 0.5)

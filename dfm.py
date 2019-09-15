@@ -2,6 +2,8 @@ import numpy as np
 import tensorflow as tf
 from dataparser import *
 import os
+import sys
+import re
 
 # Comment this line to use gpu.
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -11,7 +13,7 @@ class DFM:
                  embedding_size=40, dropout_fm=[1.0, 1.0],
                  deep_layers=[32, 32], dropout_deep=[0.5, 0.5, 0.5], 
                  deep_layers_activation=tf.nn.relu,
-                 epochs=100, batch_size=1000, 
+                 epochs=1, batch_size=1000, 
                  learning_rate=0.1,
                  use_fm=True, use_deep=True, l2_reg=0.01):
         assert use_fm or use_deep, 'At least one of use_fm and use_deep should be True.'
@@ -190,16 +192,56 @@ class DFM:
                 nrmse.append(error/np.mean(Y))
         print("Your score is %.3f!"%(1 - np.mean(nrmse)))
 
+    
+    def predict(self, Xi, Xv):
+        assert len(Xi) == len(Xv)
+        feed_dict = {
+            self.feat_index: Xi,
+            self.feat_value: Xv,
+            self.dropout_keep_fm: np.ones([len(self.dropout_fm)]),
+            self.dropout_keep_deep: np.ones([len(self.dropout_deep)])
+        }
+        return np.reshape(
+            self.sess.run(self.out, feed_dict),
+            [-1]
+        )
 
 
-if __name__ == '__main__':
+
+def train():
     dp = DataParser('Train/train_sales_data.csv', 
-        ignore_cols=['province'], label_name='salesVolume', dense=False)
+        ignore_cols=['province', 'bodyType'], label_name='salesVolume', dense=False)
     dp.gen_feat_dict()
     dp.gen_vectors()
     Xi, Xv, Y, _, _, _ = dp.gen_train_test()
     sep_test_data = dp.gen_fine_grained_test(partial_cols=['adcode', 'model'])
 
-    fm = DFM(dp.feat_dim, dp.field_dim)
-    fm.train(Xi, Xv, Y)
-    fm.get_score(sep_test_data)
+    dfm = DFM(dp.feat_dim, dp.field_dim)
+    dfm.train(Xi, Xv, Y)
+    dfm.get_score(sep_test_data)
+
+
+def predict():
+    dp = DataParser('Train/train_sales_data.csv', pred_filename='Forecast/evaluation_pure.csv',
+        ignore_cols=['province', 'bodyType'], label_name='salesVolume', dense=False)
+    dp.gen_feat_dict()
+    Xi, Xv, Y = dp.gen_vectors(filename='Train/train_sales_data.csv')
+    Xi_eval, Xv_eval, _ = dp.gen_vectors(filename='Forecast/evaluation_pure.csv')
+
+    dfm = DFM(dp.feat_dim, dp.field_dim)
+    dfm.train(Xi, Xv, Y)
+
+    y = dfm.predict(Xi_eval, Xv_eval)
+    write_results('results/dfm', y)
+    
+
+if __name__ == '__main__':
+    if len(sys.argv) <= 1:
+        print('No argument!\nArguments: "--train" for training and "--predict" for forecasting.')
+        exit(0)
+    if re.match('.*train', sys.argv[1]) != None:
+        train()
+    elif re.match('.*predict', sys.argv[1]) != None:
+        predict()
+    else:
+        print('Wrong argument!\nArguments: "--train" for training and "--predict" for forecasting.')

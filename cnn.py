@@ -41,22 +41,16 @@ model = keras.Sequential()
 model.add(layers.Conv2D(input_shape=(x_train.shape[1], x_train.shape[2], x_train.shape[3]),
     filters=32, kernel_size=(3,3), strides=(1,1), padding='valid',
     activation='relu'))
-
 model.add(layers.MaxPool2D(pool_size=(2,2)))
 model.add(layers.Flatten())
 model.add(layers.Dense(32, use_bias=True, activation='relu'))
 model.add(layers.Dense(4, use_bias=True, activation='softmax'))
 
-model.compile(optimizer=keras.optimizers.Adam(),
+model.compile(optimizer=keras.optimizers.SGD(0.1),
     loss=keras.losses.MSE,
-    metrics=['accuracy'])
+    metrics=['mse'])
 model.summary()
 
 history = model.fit(x_train, y_train, batch_size=64, epochs=5, validation_split=0.1)
-
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
-plt.legend(['training', 'valivation'], loc='upper left')
-plt.show()
 
 res = model.evaluate(x_train, y_train)

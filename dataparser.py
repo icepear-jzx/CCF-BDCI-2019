@@ -128,6 +128,8 @@ class DataParser:
                 continue
             if col in self.numeric_cols:
                 dfi[col] = self.feat_dict[col]
+                if col == 'regYear':
+                    dfv[col] -= 2015
             else:
                 dfi[col] = dfi[col].map(self.feat_dict[col])
                 dfv[col] = 1
@@ -153,9 +155,9 @@ class DataParser:
                 return Xi, Xv, y
             else:
                 return Xi, Xv
-
+                
     
-    def gen_train_test(self, train_ratio=0.95):
+    def gen_train_test_random(self, train_ratio=0.95):
         """
         Generate itentically distributed training set and testing set,
         for the fucking competition doesn't offer a testing set.
@@ -232,7 +234,7 @@ def write_results(filename, y):
 
 def process_negative(y):
     y = np.reshape(y, [-1])
-    mean = np.mean(y[y >= 0])
+    mean = np.mean(y)
     for i in range(len(y)):
         if y[i] < 0: y[i] = mean
     return y

@@ -128,8 +128,6 @@ class DataParser:
                 continue
             if col in self.numeric_cols:
                 dfi[col] = self.feat_dict[col]
-                if col == 'regYear':
-                    dfv[col] -= 2015
             else:
                 dfi[col] = dfi[col].map(self.feat_dict[col])
                 dfv[col] = 1

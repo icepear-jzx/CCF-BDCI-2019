@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from dataparser import *
+import pandas as pd
 import os
 import sys
 import re
@@ -13,7 +14,7 @@ class DFM:
                  embedding_size=80, dropout_fm=[1.0, 1.0],
                  deep_layers=[32, 32], dropout_deep=[0.5, 0.5, 0.5], 
                  deep_layers_activation=tf.nn.relu,
-                 epochs=100, batch_size=1000, 
+                 epochs=40, batch_size=1000, 
                  learning_rate=0.1,
                  use_fm=True, use_deep=True, l2_reg=0.01):
         assert use_fm or use_deep, 'At least one of use_fm and use_deep should be True.'
@@ -87,7 +88,7 @@ class DFM:
         elif self.use_deep:
             concat_input = self.y_deep
         self.out = tf.add(tf.matmul(concat_input, self.weights['concat_projection']), self.weights['concat_bias'])
-        self.out = tf.exp(self.weights['time_bias'] + self.weights['time_decay'] * self.time) * self.out
+        # self.out = tf.exp(self.weights['time_bias'] + self.weights['time_decay'] * self.time) * self.out
         
         # loss
         self.loss = tf.nn.l2_loss(tf.subtract(self.label, self.out))
@@ -227,19 +228,25 @@ def train_random():
 
 
 def train_sequential():
-    dp = DataParser('Train/train_sequential.csv', pred_filename='Train/test_sequential.csv',
+    train_file = 'Train/train_b.csv'
+    test_file = 'Train/test_b.csv'
+
+    dp = DataParser(train_file, pred_filename=test_file,
         ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
     dp.gen_feat_dict()
 
-    dp_train = DataParser('Train/train_sequential.csv',
+    dp_train = DataParser(train_file,
         ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
-    dp_test = DataParser('Train/test_sequential.csv',
+    dp_test = DataParser(test_file,
         ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
     dp_train.set_feat_dict(dp.feat_dict)
     dp_test.set_feat_dict(dp.feat_dict)
 
     Xi_train, Xv_train, y_train = dp_train.gen_vectors()
     Xi_test, Xv_test, y_test = dp_test.gen_vectors()
+
+    df_train = pd.read_csv(train_file)
+    
 
     print('%d, %d'%(dp.feat_dim, dp.field_dim))
     print('%d, %d'%(Xi_train.shape[0], Xi_train.shape[1]))
@@ -252,15 +259,31 @@ def train_sequential():
 
 
 def predict():
-    dp = DataParser('Train/train_sales_data.csv', pred_filename='Forecast/evaluation_pure.csv',
+    train_file = 'Train/total_b.csv'
+    eval_file = 'Train/eval_b.csv'
+
+    dp = DataParser(train_file, pred_filename=eval_file,
         ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
     dp.gen_feat_dict()
-    Xi, Xv, Y = dp.gen_vectors(filename='Train/train_sales_data.csv')
-    Xi_eval, Xv_eval, _ = dp.gen_vectors(filename='Forecast/evaluation_pure.csv')
 
+    dp_train = DataParser(train_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
+    dp_eval = DataParser(eval_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
+    dp_train.set_feat_dict(dp.feat_dict)
+    dp_eval.set_feat_dict(dp.feat_dict)
+
+    Xi_train, Xv_train, y_train = dp_train.gen_vectors()
+    Xi_eval, Xv_eval, _ = dp_eval.gen_vectors()
+
+    df_train = pd.read_csv(train_file)
+    
+
+    print('%d, %d'%(dp.feat_dim, dp.field_dim))
+    print('%d, %d'%(Xi_train.shape[0], Xi_train.shape[1]))
+    
     dfm = DFM(dp.feat_dim, dp.field_dim)
-    dfm.train(Xi, Xv, Y)
-
+    dfm.train(Xi_train, Xv_train, y_train)
     y = dfm.predict(Xi_eval, Xv_eval)
     y = process_negative(y)
     write_results('results/dfm', y)

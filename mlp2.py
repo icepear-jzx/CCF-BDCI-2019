@@ -22,10 +22,10 @@ label_test_list = []
 
 for m in range(1, 10):
     regDate_start = 201600 + m
-    # regDate_train_end = 201600 + 100 * ((m + 6) // 12) + (m + 6) % 12 + 1
-    # regDate_test_end = 201600 + 100 * ((m + 10) // 12) + (m + 10) % 12 + 1
-    regDate_train_end = 201600 + 100 * ((m + 10) // 12) + (m + 10) % 12 + 1
-    regDate_test_end = 201600 + 100 * ((m + 14) // 12) + (m + 14) % 12 + 1
+    regDate_train_end = 201600 + 100 * ((m + 6) // 12) + (m + 6) % 12 + 1
+    regDate_test_end = 201600 + 100 * ((m + 10) // 12) + (m + 10) % 12 + 1
+    # regDate_train_end = 201600 + 100 * ((m + 10) // 12) + (m + 10) % 12 + 1
+    # regDate_test_end = 201600 + 100 * ((m + 14) // 12) + (m + 14) % 12 + 1
     input_raw_data = raw_data[(raw_data.regDate >= regDate_start) & (raw_data.regDate <= regDate_train_end)]
     output_raw_data = raw_data[(raw_data.regDate > regDate_train_end) & (raw_data.regDate <= regDate_test_end)]
 
@@ -38,7 +38,7 @@ for m in range(1, 10):
             # print('adcode:', adcode)
             X_ir = X_i[X_i.adcode == adcode]
             X_ir = X_ir[['salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum']]
-            X_ir = X_ir.values.reshape(-1, 12 * 4)
+            X_ir = X_ir.values.reshape(-1, 8 * 4)
             Y_ir = output_raw_data[(output_raw_data.model == model) & (output_raw_data.adcode == adcode)]['salesVolume']
             Y_ir = Y_ir.values.reshape(-1, 4)
             # print('X_ir:\n', X_ir)
@@ -47,11 +47,11 @@ for m in range(1, 10):
             Y_train_list.append(Y_ir)
 
 regDate_start = 201701
-regDate_train_end = 201712
-# regDate_train_end = 201708
-# regDate_test_end = 201712
+# regDate_train_end = 201712
+regDate_train_end = 201708
+regDate_test_end = 201712
 input_raw_data = raw_data[(raw_data.regDate >= regDate_start) & (raw_data.regDate <= regDate_train_end)]
-# output_raw_data = raw_data[(raw_data.regDate > regDate_train_end) & (raw_data.regDate <= regDate_test_end)]
+output_raw_data = raw_data[(raw_data.regDate > regDate_train_end) & (raw_data.regDate <= regDate_test_end)]
 
 for model in set(input_raw_data.model):
     X_i = input_raw_data[input_raw_data.model == model]
@@ -62,13 +62,13 @@ for model in set(input_raw_data.model):
         # print('adcode:', adcode)
         X_ir = X_i[X_i.adcode == adcode]
         X_ir = X_ir[['salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum']]
-        X_ir = X_ir.values.reshape(-1, 12 * 4)
+        X_ir = X_ir.values.reshape(-1, 8 * 4)
         Y_ir = output_raw_data[(output_raw_data.model == model) & (output_raw_data.adcode == adcode)]['salesVolume']
         Y_ir = Y_ir.values.reshape(-1, 4)
         # print('X_ir:\n', X_ir)
         # print('Y_ir:\n', Y_ir)
         X_test_list.append(X_ir)
-        # Y_test_list.append(Y_ir)
+        Y_test_list.append(Y_ir)
         label_test_list.append((model, adcode))
 
 x_all = np.vstack(X_train_list + X_test_list)
@@ -78,7 +78,7 @@ x_test = x_all[len(X_train_list):]
 
 y_train = np.vstack(Y_train_list)
 y_train, mu, sigma = standardization(y_train)
-# y_test = np.vstack(Y_test_list)
+y_test = np.vstack(Y_test_list)
 print(x_train.shape, y_train.shape)
 
 # 构建模型
@@ -104,9 +104,9 @@ result = result * sigma + mu
 
 # print(model.metrics_names)
 # print(y_test)
-# print(y_test.mean())
+print(y_test.mean())
 # print(result)
-# print(((y_test - result) ** 2).mean() ** 0.5)
+print(((y_test - result) ** 2).mean() ** 0.5)
 # input()
 
 # with open('Forecast/evaluation_public.csv', 'r') as f:

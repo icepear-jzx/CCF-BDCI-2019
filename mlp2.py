@@ -17,7 +17,7 @@ with open('Train/train_all_data.csv', 'r') as f:
 X_train_list = []
 Y_train_list = []
 X_test_list = []
-# Y_test_list = []
+Y_test_list = []
 label_test_list = []
 
 for m in range(1, 10):
@@ -109,15 +109,21 @@ result = result * sigma + mu
 # print(((y_test - result) ** 2).mean() ** 0.5)
 # input()
 
-with open('Forecast/evaluation_public.csv', 'r') as f:
-    forecast_data = pd.read_csv(f)
+# with open('Forecast/evaluation_public.csv', 'r') as f:
+#     forecast_data = pd.read_csv(f)
 
-for i in range(len(label_test_list)):
-    model, adcode = label_test_list[i]
-    salesVolume = result[i]
-    forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 1)] = salesVolume[0]
-    forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 2)] = salesVolume[1]
-    forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 3)] = salesVolume[2]
-    forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 4)] = salesVolume[3]
+# for i in range(len(label_test_list)):
+#     model, adcode = label_test_list[i]
+#     salesVolume = result[i]
+#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 1)] = int(salesVolume[0])
+#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 2)] = int(salesVolume[1])
+#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 3)] = int(salesVolume[2])
+#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 4)] = int(salesVolume[3])
 
-forecast_data.to_csv('Forecast/0915-2.csv', index=False)
+# del forecast_data['province']
+# del forecast_data['adcode']
+# del forecast_data['model']
+# del forecast_data['regYear']
+# del forecast_data['regMonth']
+
+# forecast_data.to_csv('Example/0915.csv', index=False)

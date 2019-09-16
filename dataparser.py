@@ -217,13 +217,16 @@ class DataParser:
 
 def write_results(filename, y):
     time_str = time.strftime('%m-%d-%H-%M',time.localtime(time.time()))
-    filename = '%s-%s'%(filename, time_str)
+    filename = '%s-%s.csv'%(filename, time_str)
+
+    with open('Forecast/evaluation_public.csv', 'r') as f:
+        forecast_data = pd.read_csv(f)
 
     y = np.reshape(y, [-1])
     fr = open(filename, 'w')
     fr.write('id,forecastVolum\n')
     for i in range(len(y)):
-        fr.write('%d,%d\n'%(i + 1, int(max(y[i], 0))))
+        fr.write('%d,%d\n'%(forecast_data.iloc[i].id, int(max(y[i], 0))))
     fr.close()
 
 

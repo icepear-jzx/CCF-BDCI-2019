@@ -47,6 +47,7 @@ class DFM:
         self.dropout_keep_fm = tf.placeholder(tf.float32, [None], name='dropout_keep_fm')
         self.dropout_keep_deep = tf.placeholder(tf.float32, [None], name='dropout_keep_deep')
         self.train_phase = tf.placeholder(tf.bool, [], name='train_phase')
+        self.time = tf.placeholder(tf.float32, [None], name='time')
         self.weights = self._initialize_weights()
 
         # 'feature_embeddings' is M * K
@@ -86,6 +87,7 @@ class DFM:
         elif self.use_deep:
             concat_input = self.y_deep
         self.out = tf.add(tf.matmul(concat_input, self.weights['concat_projection']), self.weights['concat_bias'])
+        self.out = tf.exp(self.weights['time_bias'] + self.weights['time_decay'] * self.time) * self.out
         
         # loss
         self.loss = tf.nn.l2_loss(tf.subtract(self.label, self.out))
@@ -149,6 +151,9 @@ class DFM:
             dtype=np.float32
         )
         weights['concat_bias'] = tf.Variable(tf.constant(0.01), dtype=np.float32)
+
+        weights['time_decay'] = tf.Variable(np.random.normal, dtype=np.float32)
+        weights['time_bias'] = tf.Variable(tf.constant(0.01), dtype=np.float32)
 
         return weights
 

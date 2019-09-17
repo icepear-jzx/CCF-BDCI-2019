@@ -6,3 +6,4 @@ scipy
 lightgbm
 sklearn
 tqdm
+xgboost

@@ -3,3 +3,6 @@ pandas
 numpy
 tensorflow
 scipy
+lightgbm
+sklearn
+tqdm

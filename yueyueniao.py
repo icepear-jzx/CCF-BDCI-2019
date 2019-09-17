@@ -183,7 +183,7 @@ class BaseModel:
             score += np.sqrt(mean_squared_error(tmp['salesVolume'],oof[msk]))/(tmp['salesVolume']).mean()
         score = 1-score/df['model'].nunique()
         return score
-    def lgb_train(self, param, data=None, verbose=10, num_round=300):
+    def lgb_train(self, param, data=None, verbose=10, num_round=20000):
         if data is None:
             train = self.train.copy()
             test = self.test.copy()

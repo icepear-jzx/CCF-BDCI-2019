@@ -8,18 +8,27 @@ warnings.filterwarnings('ignore')
 
 class LGBModel:
     """
-    This model uses LightGBM to regress and predict.
+    This model uses LightGBM to regress and forcast.
+    It's the most basic model.
     """
 
     def __init__(self, params):
         self.params = params
+        self.load_path = './Train/train_extra_data.csv'
+        self.forcast_path = './Forcast/evaluation_pulic.csv'
+        self.save_path = './Results/lgb-unknown.csv'
+        self.raw_data = None
+        self.train_x = None
+        self.train_y = None
+        self.test_x = None
+        self.test_y = None
 
 
     def load_data(self):
         """
         Load data.
         """
-        pass
+        self.raw_data = pd.load_csv(self.load_path)
 
 
     def gen_feat(self):
@@ -36,9 +45,9 @@ class LGBModel:
         pass
 
 
-    def predict(self):
+    def forcast(self):
         """
-        Predict salesVolume in 2018.1 ~ 2018.4.
+        Forcast salesVolume in 2018.1 ~ 2018.4.
         """
         pass
 

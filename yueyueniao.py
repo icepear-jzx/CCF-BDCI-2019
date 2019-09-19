@@ -96,11 +96,11 @@ class BaseModel:
         # trainset = self.transStrFeats(trainset, ['model'])
         trainset['mt'] = (trainset['regYear'] - 2016) * 12 + trainset['regMonth']
 
-        # if len(pred)>0:
-        #     for m in pred.keys():
-        #         test['salesVolume'] = pred[m]
-        #         msk = test['regMonth']==m
-        #         trainset['salesVolume'][trainset['mt']==(24+m)] = test['salesVolume'][msk].values
+        if len(pred)>0:
+            for m in pred.keys():
+                test['salesVolume'] = pred[m]
+                msk = test['regMonth']==m
+                trainset['salesVolume'][trainset['mt']==(24+m)] = test['salesVolume'][msk].values
         
         #############################特征工程#############################
         
@@ -157,7 +157,7 @@ class BaseModel:
 
         # 生成特征列表，训练标签
         features = [_ for _ in train.columns if _ not in ['salesVolume']]
-        cat_feats = ['model', 'province', 'bodyType', 'regYear', 'regMonth']
+        cat_feats = ['model', 'province', 'bodyType', 'regMonth']
 
         label = 'salesVolume'
         train_target = train[label].copy()

@@ -48,16 +48,18 @@ class BaseModel:
         all_data['monthNum'] = (all_data['regYear'] - 2016) * 12 + all_data['regMonth']
         
 
-        mask = ['province','bodyType','model','monthNum','salesVolume', 'popularity', 'carCommentVolum',
-            'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
-            'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
+        # mask = ['province','bodyType','model','monthNum','salesVolume', 'popularity', 'carCommentVolum',
+        #     'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
+        #     'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
+        mask = ['province','bodyType','model','monthNum','salesVolume', 'popularity']
         df = all_data[mask].copy()
         for i in range(1, 13):
             history = df.copy()
             history['monthNum'] += i
-            rename_list = ['salesVolume', 'popularity', 'carCommentVolum',
-                'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
-                'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
+            # rename_list = ['salesVolume', 'popularity', 'carCommentVolum',
+            #     'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
+            #     'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
+            rename_list = ['salesVolume', 'popularity']
             for name in rename_list:
                 history.rename(columns={name: name + '_{}m_ago'.format(i)}, inplace=True)
             all_data = pd.merge(all_data, history, on=['province','bodyType','model','monthNum'], how='left')

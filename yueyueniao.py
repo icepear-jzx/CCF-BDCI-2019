@@ -93,14 +93,14 @@ class BaseModel:
         train_len = train.shape[0]
 
         
-        trainset = self.transStrFeats(trainset, ['model'])
+        # trainset = self.transStrFeats(trainset, ['model'])
         trainset['mt'] = (trainset['regYear'] - 2016) * 12 + trainset['regMonth']
 
-        if len(pred)>0:
-            for m in pred.keys():
-                test['salesVolume'] = pred[m]
-                msk = test['regMonth']==m
-                trainset['salesVolume'][trainset['mt']==(24+m)] = test['salesVolume'][msk].values
+        # if len(pred)>0:
+        #     for m in pred.keys():
+        #         test['salesVolume'] = pred[m]
+        #         msk = test['regMonth']==m
+        #         trainset['salesVolume'][trainset['mt']==(24+m)] = test['salesVolume'][msk].values
         
         #############################特征工程#############################
         
@@ -150,7 +150,7 @@ class BaseModel:
         train = train[~valid_mask].copy()
         
         # 去掉无效特征
-        drop_l = ['adcode','forecastVolum','id']
+        drop_l = ['adcode','forecastVolum','id', 'popularity']
         train.drop(drop_l,axis=1,inplace=True)
         test.drop(drop_l,axis=1,inplace=True)
         valid.drop(drop_l,axis=1,inplace=True)

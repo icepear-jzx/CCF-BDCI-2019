@@ -105,14 +105,14 @@ class BaseModel:
         #############################特征工程#############################
         
         df = trainset[['province','bodyType','model','mt','salesVolume']].copy()
-        for i in [1,2,3,4,5,6,7,8,9,10,11,12]:
+        for i in [1,2,3,4,12]:
             history = df.copy()
             history['mt'] += i
             history.rename(columns={'salesVolume':'Label_{}m_ago'.format(i)},inplace=True)
             trainset = pd.merge(trainset, history, on=['province','bodyType','model','mt'], how='left')
         
         df = trainset[['province','bodyType','model','mt','popularity']].copy()
-        for i in [1,2,3,4,5,6,7,8,9,10,11,12]:
+        for i in [1,2,3,4,12]:
             history = df.copy()
             history['mt'] += i
             history.rename(columns={'popularity':'popularity_{}m_ago'.format(i)},inplace=True)

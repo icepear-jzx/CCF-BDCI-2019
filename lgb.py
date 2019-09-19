@@ -46,20 +46,17 @@ class BaseModel:
         train_test_len = self.raw_data.shape[0]
 
         all_data['monthNum'] = (all_data['regYear'] - 2016) * 12 + all_data['regMonth']
-        
 
-        # mask = ['province','bodyType','model','monthNum','salesVolume', 'popularity', 'carCommentVolum',
-        #     'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
-        #     'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
-        mask = ['province','bodyType','model','monthNum','salesVolume', 'popularity']
+        mask = ['province','bodyType','model','monthNum','salesVolume', 'popularity', 'carCommentVolum',
+            'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
+            'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
         df = all_data[mask].copy()
-        for i in range(1, 13):
+        for i in [1,2,3,4,12]:
             history = df.copy()
             history['monthNum'] += i
-            # rename_list = ['salesVolume', 'popularity', 'carCommentVolum',
-            #     'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
-            #     'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
-            rename_list = ['salesVolume', 'popularity']
+            rename_list = ['salesVolume', 'popularity', 'carCommentVolum',
+                'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode',
+                'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']
             for name in rename_list:
                 history.rename(columns={name: name + '_{}m_ago'.format(i)}, inplace=True)
             all_data = pd.merge(all_data, history, on=['province','bodyType','model','monthNum'], how='left')
@@ -82,7 +79,7 @@ class BaseModel:
         forecast.drop(drop_l,axis=1,inplace=True)
 
         features = [_ for _ in train.columns if _ not in ['salesVolume']]
-        cat_feats = ['model', 'province', 'bodyType', 'regYear', 'regMonth']
+        cat_feats = ['model', 'province', 'bodyType', 'regMonth']
 
         label = 'salesVolume'
         train_y = train[label].copy()

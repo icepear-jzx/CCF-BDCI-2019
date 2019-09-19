@@ -7,15 +7,15 @@ import sys
 import re
 
 # Comment this line to use gpu.
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 class DFM:
     def __init__(self, feature_size, field_size, 
                  embedding_size=80, dropout_fm=[1.0, 1.0],
                  deep_layers=[32, 32], dropout_deep=[0.5, 0.5, 0.5], 
                  deep_layers_activation=tf.nn.relu,
-                 epochs=40, batch_size=1000, 
-                 learning_rate=0.1,
+                 epochs=200, batch_size=10, 
+                 learning_rate=0.01,
                  use_fm=True, use_deep=True, l2_reg=0.01):
         assert use_fm or use_deep, 'At least one of use_fm and use_deep should be True.'
 
@@ -175,6 +175,25 @@ class DFM:
                     self.dropout_keep_deep: self.dropout_deep}
                 _, error = self.sess.run([self.train_op, self.rmse], feed_dict)
             print('episode %d, rmse: %.3f'%(epoch, error))
+
+    
+    def train_and_eval(self, Xi_train, Xv_train, Y_train, Xi_test, Xv_test, Y_test):
+        for epoch in range(self.epochs):
+            permu = np.random.permutation(len(Xi_train))
+            Xi = Xi_train[permu]
+            Xv = Xv_train[permu]
+            Y = Y_train[permu]
+
+            for i in range(0, len(Xi), self.batch_size):
+                feed_dict = {
+                    self.feat_index: Xi, 
+                    self.feat_value: Xv, 
+                    self.label: np.reshape(Y, [-1, 1]),
+                    self.dropout_keep_fm: self.dropout_fm,
+                    self.dropout_keep_deep: self.dropout_deep}
+                _, error = self.sess.run([self.train_op, self.rmse], feed_dict)
+            print('episode %d, rmse: %.3f'%(epoch, error))
+            print(self.eval(Xi_test, Xv_test, Y_test))
             
 
     def eval(self, Xi, Xv, Y):
@@ -244,16 +263,15 @@ def train_sequential():
 
     Xi_train, Xv_train, y_train = dp_train.gen_vectors()
     Xi_test, Xv_test, y_test = dp_test.gen_vectors()
-
-    df_train = pd.read_csv(train_file)
-    
+    test_data_list = dp_test.gen_fine_grained_test(['adcode', 'model'], all_test=True)    
 
     print('%d, %d'%(dp.feat_dim, dp.field_dim))
     print('%d, %d'%(Xi_train.shape[0], Xi_train.shape[1]))
     
     dfm = DFM(dp.feat_dim, dp.field_dim)
-    dfm.train(Xi_train, Xv_train, y_train)
+    dfm.train_and_eval(Xi_train, Xv_train, y_train, Xi_test, Xv_test, y_test)
     print(dfm.eval(Xi_test, Xv_test, y_test))
+    dfm.get_score(test_data_list)
 
     
 

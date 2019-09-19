@@ -182,14 +182,20 @@ class DataParser:
         return self.Xi_train, self.Xv_train, self.y_train, self.Xi_test, self.Xv_test, self.y_test
 
 
-    def gen_fine_grained_test(self, partial_cols=[]):
+    def gen_fine_grained_test(self, partial_cols=[], all_test=False):
         """
         For every feature combination in partial_cols, generate a separate test set.
         """
         # assert self.dense, 'This function only for dense representation yet. Sparse version will be updated soon.'
-        assert not self.sparse_data == None, 'gen_test_data() must be called before using this function.'
+        # assert not self.sparse_data == None, 'gen_test_data() must be called before using this function.'
         for col in partial_cols:
             assert not col in self.numeric_cols, 'Partial features should not be numeric.'
+
+        if all_test:
+            if not self.dense:
+                self.Xi_test = self.sparse_data[0]
+                self.Xv_test = self.sparse_data[1]
+                self.y_test = self.labels
 
         data_indices = []
         def helper(vec_pos, cols):

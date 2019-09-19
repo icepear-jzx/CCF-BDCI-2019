@@ -28,12 +28,12 @@ class BaseModel:
         """
         读取数据集
         """
-        # train_sales = pd.read_csv(path+'train_sales_data.csv')
-        # train_search = pd.read_csv(path+'train_search_data.csv')
+        train_sales = pd.read_csv(path+'train_sales_data.csv')
+        train_search = pd.read_csv(path+'train_search_data.csv')
         test = pd.read_csv('./Forecast/evaluation_public.csv')
 
-        # train = pd.merge(train_sales, train_search, on=['province','adcode','model','regYear','regMonth'],how='left')
-        train = pd.read_csv('./Train/train_extra_data.csv')
+        train = pd.merge(train_sales, train_search, on=['province','adcode','model','regYear','regMonth'],how='left')
+        # train = pd.read_csv('./Train/train_extra_data.csv')
 
         model_bodyType = train[['model','bodyType']].groupby(['model'],as_index=False).first()
         test = pd.merge(test, model_bodyType, on='model', how='left')
@@ -112,7 +112,7 @@ class BaseModel:
             trainset = pd.merge(trainset, history, on=['province','bodyType','model','mt'], how='left')
         
         df = trainset[['province','bodyType','model','mt','popularity']].copy()
-        for i in [4,5,6]:
+        for i in [1,2,3,4,5,6,7,8,9,10,11,12]:
             history = df.copy()
             history['mt'] += i
             history.rename(columns={'popularity':'popularity_{}m_ago'.format(i)},inplace=True)
@@ -121,27 +121,27 @@ class BaseModel:
         day_map = {1:31,2:28,3:31,4:30,5:31,6:30,7:31,8:31,9:30,10:31,11:30,12:31}
         trainset['dayCount']=trainset['regMonth'].map(day_map)
         trainset.loc[(trainset.regMonth==2)&(trainset.regYear==2016),'dayCount']=29
-        trainset['salesVolume']/=trainset['dayCount']
-        trainset['popularity']/=trainset['dayCount']
+        # trainset['salesVolume']/=trainset['dayCount']
+        # trainset['popularity']/=trainset['dayCount']
         
-        base_step = month-1 if month-1>0 else 1
-        trainset = self.getHistoryIncrease(trainset, step=base_step)
-        trainset = self.getHistoryIncrease(trainset, step=base_step+1)
-        trainset = self.getHistoryIncrease(trainset, step=base_step+2)
-        trainset = self.getHistoryIncrease(trainset, step=base_step, wind=2)
-        trainset = self.getHistoryIncrease(trainset, step=base_step+1, wind=2)
-        trainset = self.getHistoryIncrease(trainset, step=base_step+2, wind=2)
-        trainset = self.getHistoryIncrease(trainset, step=base_step, wind=12)
+        # base_step = month-1 if month-1>0 else 1
+        # trainset = self.getHistoryIncrease(trainset, step=base_step)
+        # trainset = self.getHistoryIncrease(trainset, step=base_step+1)
+        # trainset = self.getHistoryIncrease(trainset, step=base_step+2)
+        # trainset = self.getHistoryIncrease(trainset, step=base_step, wind=2)
+        # trainset = self.getHistoryIncrease(trainset, step=base_step+1, wind=2)
+        # trainset = self.getHistoryIncrease(trainset, step=base_step+2, wind=2)
+        # trainset = self.getHistoryIncrease(trainset, step=base_step, wind=12)
         
-        trainset = self.getHistoryIncrease(trainset, step=month, col='popularity')
-        trainset = self.getHistoryIncrease(trainset, step=month+1, col='popularity')
-        trainset = self.getHistoryIncrease(trainset, step=month+2, col='popularity')
-        trainset = self.getHistoryIncrease(trainset, step=month, wind=2, col='popularity')
-        trainset = self.getHistoryIncrease(trainset, step=month+1, wind=2, col='popularity')
-        trainset = self.getHistoryIncrease(trainset, step=month+2, wind=2, col='popularity')
+        # trainset = self.getHistoryIncrease(trainset, step=month, col='popularity')
+        # trainset = self.getHistoryIncrease(trainset, step=month+1, col='popularity')
+        # trainset = self.getHistoryIncrease(trainset, step=month+2, col='popularity')
+        # trainset = self.getHistoryIncrease(trainset, step=month, wind=2, col='popularity')
+        # trainset = self.getHistoryIncrease(trainset, step=month+1, wind=2, col='popularity')
+        # trainset = self.getHistoryIncrease(trainset, step=month+2, wind=2, col='popularity')
         
-        trainset['salesVolume']*=trainset['dayCount']
-        trainset['popularity']*=trainset['dayCount']
+        # trainset['salesVolume']*=trainset['dayCount']
+        # trainset['popularity']*=trainset['dayCount']
         # 划分训练、验证集
         train = trainset.iloc[:train_len]
         test = trainset.iloc[train_len:]
@@ -157,7 +157,7 @@ class BaseModel:
 
         # 生成特征列表，训练标签
         features = [_ for _ in train.columns if _ not in ['salesVolume']]
-        cat_feats = ['model', 'province', 'bodyType', 'regMonth']
+        cat_feats = ['model', 'province', 'bodyType', 'regYear', 'regMonth']
 
         label = 'salesVolume'
         train_target = train[label].copy()

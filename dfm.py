@@ -1,20 +1,21 @@
 import numpy as np
 import tensorflow as tf
 from dataparser import *
+import pandas as pd
 import os
 import sys
 import re
 
 # Comment this line to use gpu.
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 class DFM:
     def __init__(self, feature_size, field_size, 
-                 embedding_size=40, dropout_fm=[1.0, 1.0],
+                 embedding_size=80, dropout_fm=[1.0, 1.0],
                  deep_layers=[32, 32], dropout_deep=[0.5, 0.5, 0.5], 
                  deep_layers_activation=tf.nn.relu,
-                 epochs=50, batch_size=1000, 
-                 learning_rate=0.1,
+                 epochs=200, batch_size=10, 
+                 learning_rate=0.01,
                  use_fm=True, use_deep=True, l2_reg=0.01):
         assert use_fm or use_deep, 'At least one of use_fm and use_deep should be True.'
 
@@ -47,6 +48,7 @@ class DFM:
         self.dropout_keep_fm = tf.placeholder(tf.float32, [None], name='dropout_keep_fm')
         self.dropout_keep_deep = tf.placeholder(tf.float32, [None], name='dropout_keep_deep')
         self.train_phase = tf.placeholder(tf.bool, [], name='train_phase')
+        self.time = tf.placeholder(tf.float32, [None], name='time')
         self.weights = self._initialize_weights()
 
         # 'feature_embeddings' is M * K
@@ -86,6 +88,7 @@ class DFM:
         elif self.use_deep:
             concat_input = self.y_deep
         self.out = tf.add(tf.matmul(concat_input, self.weights['concat_projection']), self.weights['concat_bias'])
+        # self.out = tf.exp(self.weights['time_bias'] + self.weights['time_decay'] * self.time) * self.out
         
         # loss
         self.loss = tf.nn.l2_loss(tf.subtract(self.label, self.out))
@@ -150,6 +153,9 @@ class DFM:
         )
         weights['concat_bias'] = tf.Variable(tf.constant(0.01), dtype=np.float32)
 
+        weights['time_decay'] = tf.Variable(np.random.normal, dtype=np.float32)
+        weights['time_bias'] = tf.Variable(tf.constant(0.01), dtype=np.float32)
+
         return weights
 
     
@@ -169,6 +175,25 @@ class DFM:
                     self.dropout_keep_deep: self.dropout_deep}
                 _, error = self.sess.run([self.train_op, self.rmse], feed_dict)
             print('episode %d, rmse: %.3f'%(epoch, error))
+
+    
+    def train_and_eval(self, Xi_train, Xv_train, Y_train, Xi_test, Xv_test, Y_test):
+        for epoch in range(self.epochs):
+            permu = np.random.permutation(len(Xi_train))
+            Xi = Xi_train[permu]
+            Xv = Xv_train[permu]
+            Y = Y_train[permu]
+
+            for i in range(0, len(Xi), self.batch_size):
+                feed_dict = {
+                    self.feat_index: Xi, 
+                    self.feat_value: Xv, 
+                    self.label: np.reshape(Y, [-1, 1]),
+                    self.dropout_keep_fm: self.dropout_fm,
+                    self.dropout_keep_deep: self.dropout_deep}
+                _, error = self.sess.run([self.train_op, self.rmse], feed_dict)
+            print('episode %d, rmse: %.3f'%(epoch, error))
+            print(self.eval(Xi_test, Xv_test, Y_test))
             
 
     def eval(self, Xi, Xv, Y):
@@ -208,12 +233,12 @@ class DFM:
 
 
 
-def train():
+def train_random():
     dp = DataParser('Train/train_sales_data.csv', 
-        ignore_cols=['province', 'bodyType'], label_name='salesVolume', dense=False)
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
     dp.gen_feat_dict()
     dp.gen_vectors()
-    Xi, Xv, Y, _, _, _ = dp.gen_train_test()
+    Xi, Xv, Y, _, _, _ = dp.gen_train_test_random()
     sep_test_data = dp.gen_fine_grained_test(partial_cols=['adcode', 'model'])
 
     dfm = DFM(dp.feat_dim, dp.field_dim)
@@ -221,16 +246,62 @@ def train():
     dfm.get_score(sep_test_data)
 
 
-def predict():
-    dp = DataParser('Train/train_sales_data.csv', pred_filename='Forecast/evaluation_pure.csv',
-        ignore_cols=['province', 'bodyType'], label_name='salesVolume', dense=False)
+def train_sequential():
+    train_file = 'Train/train_b.csv'
+    test_file = 'Train/test_b.csv'
+
+    dp = DataParser(train_file, pred_filename=test_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
     dp.gen_feat_dict()
-    Xi, Xv, Y = dp.gen_vectors(filename='Train/train_sales_data.csv')
-    Xi_eval, Xv_eval, _ = dp.gen_vectors(filename='Forecast/evaluation_pure.csv')
 
+    dp_train = DataParser(train_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
+    dp_test = DataParser(test_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
+    dp_train.set_feat_dict(dp.feat_dict)
+    dp_test.set_feat_dict(dp.feat_dict)
+
+    Xi_train, Xv_train, y_train = dp_train.gen_vectors()
+    Xi_test, Xv_test, y_test = dp_test.gen_vectors()
+    test_data_list = dp_test.gen_fine_grained_test(['adcode', 'model'], all_test=True)    
+
+    print('%d, %d'%(dp.feat_dim, dp.field_dim))
+    print('%d, %d'%(Xi_train.shape[0], Xi_train.shape[1]))
+    
     dfm = DFM(dp.feat_dim, dp.field_dim)
-    dfm.train(Xi, Xv, Y)
+    dfm.train_and_eval(Xi_train, Xv_train, y_train, Xi_test, Xv_test, y_test)
+    print(dfm.eval(Xi_test, Xv_test, y_test))
+    dfm.get_score(test_data_list)
 
+    
+
+
+def predict():
+    train_file = 'Train/total_b.csv'
+    eval_file = 'Train/eval_b.csv'
+
+    dp = DataParser(train_file, pred_filename=eval_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
+    dp.gen_feat_dict()
+
+    dp_train = DataParser(train_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
+    dp_eval = DataParser(eval_file,
+        ignore_cols=['province', 'bodyType'], numeric_cols=['regYear'], label_name='salesVolume', dense=False)
+    dp_train.set_feat_dict(dp.feat_dict)
+    dp_eval.set_feat_dict(dp.feat_dict)
+
+    Xi_train, Xv_train, y_train = dp_train.gen_vectors()
+    Xi_eval, Xv_eval, _ = dp_eval.gen_vectors()
+
+    df_train = pd.read_csv(train_file)
+    
+
+    print('%d, %d'%(dp.feat_dim, dp.field_dim))
+    print('%d, %d'%(Xi_train.shape[0], Xi_train.shape[1]))
+    
+    dfm = DFM(dp.feat_dim, dp.field_dim)
+    dfm.train(Xi_train, Xv_train, y_train)
     y = dfm.predict(Xi_eval, Xv_eval)
     y = process_negative(y)
     write_results('results/dfm', y)
@@ -241,7 +312,7 @@ if __name__ == '__main__':
         print('No argument!\nArguments: "--train" for training and "--predict" for forecasting.')
         exit(0)
     if re.match('.*train', sys.argv[1]) != None:
-        train()
+        train_sequential()
     elif re.match('.*predict', sys.argv[1]) != None:
         predict()
     else:

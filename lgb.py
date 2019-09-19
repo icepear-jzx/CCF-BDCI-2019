@@ -22,6 +22,7 @@ class LGBModel:
         self.train_y = None
         self.test_x = None
         self.test_y = None
+        self.forcast_x = None
 
 
     def load_data(self):
@@ -29,6 +30,10 @@ class LGBModel:
         Load data.
         """
         self.raw_data = pd.load_csv(self.load_path)
+        self.forcast_x = pd.load_csv(self.forcast_path)
+        model_bodyType = train[['model','bodyType']].groupby(['model'],as_index=False).first()
+        self.forcast_x = pd.merge(self.forcast_x, model_bodyType, on='model', how='left')
+        print(self.forcast_x)
 
 
     def gen_feat(self):

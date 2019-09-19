@@ -28,11 +28,12 @@ class BaseModel:
         """
         读取数据集
         """
-        train_sales = pd.read_csv(path+'train_sales_data.csv')
-        train_search = pd.read_csv(path+'train_search_data.csv')
-        test = pd.read_csv('./Forecast/'+'evaluation_public.csv')
+        # train_sales = pd.read_csv(path+'train_sales_data.csv')
+        # train_search = pd.read_csv(path+'train_search_data.csv')
+        test = pd.read_csv('./Forecast/evaluation_public.csv')
 
-        train = pd.merge(train_sales, train_search, on=['province','adcode','model','regYear','regMonth'],how='left')
+        # train = pd.merge(train_sales, train_search, on=['province','adcode','model','regYear','regMonth'],how='left')
+        train = pd.read_csv('./Train/train_extra_data.csv')
 
         model_bodyType = train[['model','bodyType']].groupby(['model'],as_index=False).first()
         test = pd.merge(test, model_bodyType, on='model', how='left')

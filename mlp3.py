@@ -20,12 +20,14 @@ X_test_list = []
 Y_test_list = []
 label_test_list = []
 
-for m in range(1, 9):
-    regDate_start = 201600 + m
+for m in range(1, 17):
+    regDate_start = 201600 + 100 * ((m - 1) // 12) + (m - 1) % 12 + 1
+    regDate_train_end = 201600 + 100 * ((m + 2) // 12) + (m + 2) % 12 + 1
+    regDate_test_end = 201600 + 100 * ((m + 6) // 12) + (m + 6) % 12 + 1
     # regDate_train_end = 201600 + 100 * ((m + 6) // 12) + (m + 6) % 12 + 1
     # regDate_test_end = 201600 + 100 * ((m + 10) // 12) + (m + 10) % 12 + 1
-    regDate_train_end = 201600 + 100 * ((m + 10) // 12) + (m + 10) % 12 + 1
-    regDate_test_end = 201600 + 100 * ((m + 14) // 12) + (m + 14) % 12 + 1
+    # regDate_train_end = 201600 + 100 * ((m + 10) // 12) + (m + 10) % 12 + 1
+    # regDate_test_end = 201600 + 100 * ((m + 14) // 12) + (m + 14) % 12 + 1
     input_raw_data = raw_data[(raw_data.regDate >= regDate_start) & (raw_data.regDate <= regDate_train_end)]
     output_raw_data = raw_data[(raw_data.regDate > regDate_train_end) & (raw_data.regDate <= regDate_test_end)]
 
@@ -36,10 +38,11 @@ for m in range(1, 9):
             # print('bodyType:', bodyType)
             # print('adcode:', adcode)
             X_ir = X_i[X_i.adcode == adcode]
-            # X_ir = X_ir[['salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode', 'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']]
+            X_ir = X_ir[['regYear', 'regMonth', 'salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode', 'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']]
             # X_ir = X_ir[['salesVolume']]
-            X_ir = X_ir[['salesVolume', 'popularity']]
-            X_ir = X_ir.values.reshape(-1, 12 * 2)
+            # X_ir = X_ir[['salesVolume', 'popularity']]
+            # X_ir = X_ir[['salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum']]
+            X_ir = X_ir.values.reshape(-1, 4 * 10)
             Y_ir = output_raw_data[(output_raw_data.model == model) & (output_raw_data.adcode == adcode)]['salesVolume']
             Y_ir = Y_ir.values.reshape(-1, 4)
             # print('X_ir:\n', X_ir)
@@ -47,7 +50,7 @@ for m in range(1, 9):
             X_train_list.append(X_ir)
             Y_train_list.append(Y_ir)
 
-regDate_start = 201609
+regDate_start = 201705
 # regDate_train_end = 201712
 regDate_train_end = 201708
 regDate_test_end = 201712
@@ -61,10 +64,11 @@ for model in set(input_raw_data.model):
         # print('bodyType:', bodyType)
         # print('adcode:', adcode)
         X_ir = X_i[X_i.adcode == adcode]
-        # X_ir = X_ir[['salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode', 'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']]
+        X_ir = X_ir[['regYear', 'regMonth', 'salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum', 'salesVolume_model_in_all_adcode', 'salesVolume_bodyType_in_all_adcode', 'salesVolume_adcode_in_all_model', 'salesVolume_bodyType_in_all_model']]
         # X_ir = X_ir[['salesVolume']]
-        X_ir = X_ir[['salesVolume', 'popularity']]
-        X_ir = X_ir.values.reshape(-1, 12 * 2)
+        # X_ir = X_ir[['salesVolume', 'popularity']]
+        # X_ir = X_ir[['salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum']]
+        X_ir = X_ir.values.reshape(-1, 4 * 10)
         Y_ir = output_raw_data[(output_raw_data.model == model) & (output_raw_data.adcode == adcode)]['salesVolume']
         Y_ir = Y_ir.values.reshape(-1, 4)
         # print('X_ir:\n', X_ir)
@@ -98,35 +102,21 @@ model.compile(optimizer=keras.optimizers.Adam(0.001),
              metrics=['mse'])
 model.summary()
 
-# 训练
-model.fit(x_train, y_train, batch_size=256, epochs=100)
+mse = []
+for i in range(40):
+    # 训练
+    model.fit(x_train, y_train, batch_size=256, epochs=10, verbose=0)
 
-result = model.predict(x_test)
-result = result * sigma + mu
-# y_test = y_test * sigma + mu
+    result = model.predict(x_test)
+    result = result * sigma + mu
+    # y_test = y_test * sigma + mu
 
-# print(model.metrics_names)
-# print(y_test)
-print(y_test.mean())
-# print(result)
-print(((y_test - result) ** 2).mean() ** 0.5)
-# input()
+    # print(model.metrics_names)
+    # print(y_test)
+    # print(y_test.mean())
+    # print(result)
+    print(((y_test - result) ** 2).mean() ** 0.5)
+    # input()
+    mse.append(((y_test - result) ** 2).mean() ** 0.5)
 
-# with open('Forecast/evaluation_public.csv', 'r') as f:
-#     forecast_data = pd.read_csv(f)
-
-# for i in range(len(label_test_list)):
-#     model, adcode = label_test_list[i]
-#     salesVolume = result[i]
-#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 1)] = int(salesVolume[0])
-#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 2)] = int(salesVolume[1])
-#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 3)] = int(salesVolume[2])
-#     forecast_data.forecastVolum[(forecast_data.model == model) & (forecast_data.adcode == adcode) & (forecast_data.regMonth == 4)] = int(salesVolume[3])
-
-# del forecast_data['province']
-# del forecast_data['adcode']
-# del forecast_data['model']
-# del forecast_data['regYear']
-# del forecast_data['regMonth']
-
-# forecast_data.to_csv('Results/mlp-09-16-15-15.csv', index=False)
+print(mse)

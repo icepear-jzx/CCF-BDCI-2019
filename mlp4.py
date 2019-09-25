@@ -47,8 +47,8 @@ def scale_fit(x):
     mu = np.zeros(shape=(12, ))
     sigma = np.zeros(shape=(12, ))
     for i in range(12):
-        mu[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]/12)]])
-        sigma[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]/12)]])
+        mu[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
+        sigma[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
     return mu, sigma
 
 
@@ -72,18 +72,21 @@ def main():
     x = preprocess_train_data()
     x = np.reshape(x, (-1, 24))
     mu, sigma = scale_fit(x[:, :12])
-    x_train = np.vstack([x[:, 0:4], x[:, 4:8], x[:, 8:12]])
-    y_train = np.vstack([x[:, 12:16], x[:, 16:20], x[:, 20:24]])
-    xs_train, mu, sigma = scale(x_train)
-    ys_train = (y_train - mu)/sigma
+    xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
+    ys_train = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+
+    xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
+    ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
+
     print('The shape of input data is ', x.shape)
     model = build_mlp()
     model.summary()
 
-    model.fit(xs_train, ys_train, batch_size=64, epochs=10, validation_split=0.1, verbose=2)
-    ys_pred = model.predict(xs_train[-1320*4:-1320*3])
-    y_pred = ys_pred*sigma + mu 
-    print('rmse: %.3f'%my_metric(y_train[-1320:], y_pred))
+    model.fit(xs_train, ys_train, batch_size=1320, epochs=1000, shuffle=False, validation_split=0.1, verbose=2)
+    ys_pred = model.predict(xs_train[-1320:])
+    y_pred = scale_back(ys_pred, mu, sigma, range(8, 12))
+    y_true = x[:, 12 + 8:12 + 12]
+    print('rmse: %.3f'%my_metric(y_true, y_pred))
     # print('score: %.3f'%get_score(x[:, -1, 0], x_pred))
 
 

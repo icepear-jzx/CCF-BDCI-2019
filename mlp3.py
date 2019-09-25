@@ -89,12 +89,19 @@ print(x_train.shape, y_train.shape)
 
 # 构建模型
 
-model = keras.Sequential([
-    layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal', input_shape=(x_train.shape[1], )),
-    layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal'),
-    layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal'),
-    layers.Dense(4)
-])
+# model = keras.Sequential([
+#     layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal', input_shape=(x_train.shape[1], )),
+#     layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal'),
+#     layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal'),
+#     layers.Dense(4)
+# ])
+
+input = layers.Input(shape=(x_train.shape[1], ))
+dense = layers.Dense(32, activation='sigmoid')(input)
+dense = layers.Dense(32, activation='sigmoid')(dense)
+dense = layers.add(input, dense)
+output = layers.Dense(4)(dense)
+model = keras.Moedel(input, output)
 
 # 配置模型
 model.compile(optimizer=keras.optimizers.Adam(0.001),

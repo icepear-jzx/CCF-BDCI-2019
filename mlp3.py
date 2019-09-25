@@ -3,6 +3,9 @@ import tensorflow.keras as keras
 import tensorflow.keras.layers as layers
 import pandas as pd
 import numpy as np
+import os
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 
 def standardization(data):
@@ -97,11 +100,13 @@ print(x_train.shape, y_train.shape)
 # ])
 
 input = layers.Input(shape=(x_train.shape[1], ))
-dense = layers.Dense(32, activation='sigmoid')(input)
-dense = layers.Dense(32, activation='sigmoid')(dense)
-dense = layers.add(input, dense)
+dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(input)
+dense = layers.Dense(40, kernel_initializer='he_normal')(dense)
+dense = layers.Add()([input, dense])
+dense = layers.Activation('sigmoid')(dense)
+dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(dense)
 output = layers.Dense(4)(dense)
-model = keras.Moedel(input, output)
+model = keras.Model(input, output)
 
 # 配置模型
 model.compile(optimizer=keras.optimizers.Adam(0.001),

@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-
 import pandas as pd
 # don't show warning
 pd.set_option('mode.chained_assignment', None)
@@ -98,3 +97,38 @@ def show_all_newsReplyVolum(col, ifshowlabel=False):
     if ifshowlabel:
         plt.legend()
     plt.show()
+
+
+def show_forecast(col, path, step_by_step=False):
+
+    # read data
+    with open(path, 'r') as f:
+        result_data = pd.read_csv(f)
+    with open('Train/train_sales_data.csv', 'r') as f:
+        train_data = pd .read_csv(f)
+    with open('Forecast/evaluation_public.csv', 'r') as f:
+        forecast_data = pd.read_csv(f)
+    
+    # merge data
+    del forecast_data['forecastVolum']
+    data = pd.merge(forecast_data, result_data, on=['id'])
+    data.rename(columns={'forecastVolum': 'salesVolume'}, inplace=True)
+    del data['id']
+    model_bodyType = train_data[['model','bodyType']].groupby(['model'], as_index=False).first()
+    data = pd.merge(data, model_bodyType, on='model', how='left')
+    data = pd.concat([train_data, data], sort=False)
+
+    # draw
+    plt.title('forecasting of all {}s'.format(col))
+    if step_by_step:
+        for item in set(data[col]):
+            draw(data.copy(), filter={col: item})
+            plt.axvline(24)
+            # show
+            plt.show()
+    else:
+        for item in set(data[col]):
+            draw(data.copy(), filter={col: item})
+        # show
+        plt.axvline(24)
+        plt.show()

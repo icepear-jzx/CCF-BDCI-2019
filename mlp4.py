@@ -21,14 +21,14 @@ def preprocess_train_data():
     return np.array(train_list) # 1320 * 24 * 1
 
 
-def build_mlp():
-    input = layers.Input(shape=(4, ))
+def build_mlp(input_dim):
+    input = layers.Input(shape=(input_dim, ))
     dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(input)
-    dense = layers.Dense(4, kernel_initializer='he_normal')(dense)
+    dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
     dense = layers.Add()([input, dense])
     dense = layers.Activation('sigmoid')(dense)
     dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(dense)
-    output = layers.Dense(4)(dense)
+    output = layers.Dense(input_dim)(dense)
     model = keras.Model(input, output)
     model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
     return model
@@ -72,20 +72,21 @@ def main():
     x = preprocess_train_data()
     x = np.reshape(x, (-1, 24))
     mu, sigma = scale_fit(x[:, :12])
-    xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
-    ys_train = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+    xs_train = scale_to(x[:1000, :12], mu, sigma, range(0, 12))
+    ys_train = scale_to(x[:1000, 12:], mu, sigma, range(0, 12))
+    xs_test = scale_to(x[1000:, :12], mu, sigma, range(0, 12))
+    y_true = x[1000:, 12:]
 
-    xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
-    ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
+    # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
+    # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
 
     print('The shape of input data is ', x.shape)
-    model = build_mlp()
+    model = build_mlp(input_dim=12)
     model.summary()
 
-    model.fit(xs_train, ys_train, batch_size=1320, epochs=1000, shuffle=False, validation_split=0.1, verbose=2)
-    ys_pred = model.predict(xs_train[-1320:])
-    y_pred = scale_back(ys_pred, mu, sigma, range(8, 12))
-    y_true = x[:, 12 + 8:12 + 12]
+    model.fit(xs_train, ys_train, batch_size=None, epochs=40, validation_split=0.1, verbose=2)
+    ys_pred = model.predict(xs_test)
+    y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
     print('rmse: %.3f'%my_metric(y_true, y_pred))
     # print('score: %.3f'%get_score(x[:, -1, 0], x_pred))
 

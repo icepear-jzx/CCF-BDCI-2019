@@ -6,7 +6,7 @@ import numpy as np
 import os
 from dataparser import write_results
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 train_file = 'Train/train_extra_data.csv'
 eval_file = 'Forecast/evaluation_public.csv'

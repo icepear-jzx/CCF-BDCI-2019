@@ -17,35 +17,62 @@ def preprocess_train_data():
     for model in df['model'].unique():
         for adcode in df['adcode'].unique():
             index = (df['model'] == model) & (df['adcode'] == adcode)
-            train_list.append(df[['salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum']][index].values)
+            train_list.append(df[['salesVolume', 'popularity']][index].values)
     return np.array(train_list)
     
 
+def scale(x):
+    mu = np.mean(x, axis=0)
+    sigma = np.std(x, axis=0)
+    return (x - mu)/sigma, mu, sigma
 
-def my_rmse(y_true, y_pred):
-    return (np.sum((y_true - y_pred)**2))**0.5
+
+def re_scale(x, mu, sigma):
+    return x*sigma[0] + mu[0]
+
+
+def my_metric(y_true, y_pred):
+    return np.mean(np.abs(y_true - y_pred))
+
+def get_score(y_true, y_pred):
+    return 1 - np.sum(np.abs(y_pred-y_true)/y_true)/60
 
 
 def build_lstm():
     lstm = keras.Sequential()
-    lstm.add(layers.LSTM(32, input_dim=4, return_sequences=False))
-    # lstm.add(layers.LSTM(32, activation='relu'))
-    # lstm.add(layers.Dense(32, activation='sigmoid'))
+    lstm.add(layers.LSTM(32, input_dim=2, return_sequences=False))
+    # lstm.add(layers.LSTM(32))
+    lstm.add(layers.Dense(32))
     lstm.add(layers.Dense(1))
-    lstm.compile(keras.optimizers.Adam(0.01), loss=keras.losses.mse, metrics=[my_rmse])
+    lstm.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
     return lstm
+
+
+def build_mlp():
+    mlp = keras.Sequential()
+    mlp.add(layers.Reshape([1*22], input_shape=[22]))
+    mlp.add(layers.Dense(32, activation='sigmoid'))
+    mlp.add(layers.Dense(32, activation='sigmoid'))
+    mlp.add(layers.Dense(32, activation='sigmoid'))
+    mlp.add(layers.Dense(1))
+    mlp.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
+    return mlp
 
 
 def main():
     x = preprocess_train_data()
     print('The shape of input data is ', x.shape)
-    lstm = build_lstm()
-    lstm.summary()
+    xs, mu, sigma = scale(x)
+    model = build_lstm()
+    model.summary()
 
-    # lstm.fit(x[:, :-2, :], x[:, -2, 0], batch_size=32, epochs=40, validation_split=0.1, verbose=1)
-    for t in range(1, x.shape[1]-1):
-        lstm.fit(x[:, :t, :], x[:, t, 0], batch_size=32, epochs=5, validation_split=0.1)
-    print('rmse: %.3f'%lstm.evaluate(x[:, :-1, :], x[:, -1, 0])[1])
+    # model.fit(xs[:, :-2, :1], xs[:, -2, 0], batch_size=100, epochs=200, validation_split=0.1, verbose=2)
+    for t in range(1, xs.shape[1]-1):
+        model.fit(x[:, :t, :], x[:, t, 0], batch_size=32, epochs=t, validation_split=0.1, verbose=2)
+    x_pred = model.predict(x[:, 1:-1, :])
+    # x_pred = re_scale(x_pred, mu, sigma)
+    print('rmse: %.3f'%my_metric(x[:, -1, 0], x_pred))
+    print('score: %.3f'%get_score(x[:, -1, 0], x_pred))
 
 
 if __name__ == '__main__':

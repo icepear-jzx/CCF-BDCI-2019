@@ -4,6 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import numpy as np
 import os
+from dataparser import write_results
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 
@@ -44,8 +45,8 @@ def get_score(y_true, y_pred):
 
 def scale_fit(x):
     assert x.shape[1] % 12 == 0
-    mu = np.zeros(shape=(12, ))
-    sigma = np.zeros(shape=(12, ))
+    mu = np.zeros(shape=(12, ), dtype=np.float)
+    sigma = np.zeros(shape=(12, ), dtype=np.float)
     for i in range(12):
         mu[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
         sigma[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
@@ -72,8 +73,8 @@ def main():
     x = preprocess_train_data()
     x = np.reshape(x, (-1, 24))
     mu, sigma = scale_fit(x[:, :12])
-    xs_train = scale_to(x[:1000, :12], mu, sigma, range(0, 12))
-    ys_train = scale_to(x[:1000, 12:], mu, sigma, range(0, 12))
+    xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
+    ys_train = scale_to(x[:, 12:], mu, sigma, range(0, 12))
     xs_test = scale_to(x[1000:, :12], mu, sigma, range(0, 12))
     y_true = x[1000:, 12:]
 
@@ -84,7 +85,7 @@ def main():
     model = build_mlp(input_dim=12)
     model.summary()
 
-    model.fit(xs_train, ys_train, batch_size=32, epochs=200, validation_split=0.1, verbose=2)
+    model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
     ys_pred = model.predict(xs_test)
     y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
     print('rmse: %.3f'%my_metric(y_true, y_pred))
@@ -96,6 +97,12 @@ def main():
     #     # plt.plot(x[0][:12], label='origin', color='blue')
     #     plt.legend(loc='upper left')
     #     plt.show()
+
+    xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+    ys_eval = model.predict(xs_eval)
+    y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
+    y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
+    write_results('Results/year-wise-mlp', y_result)
 
 
 if __name__ == '__main__':

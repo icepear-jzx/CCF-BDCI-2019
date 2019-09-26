@@ -54,7 +54,7 @@ def scale_fit(x):
 
 def scale_to(x, mu, sigma, month_range):
     assert x.shape[1] == len(month_range)
-    xs = np.zeros_like(x)
+    xs = np.zeros_like(x, dtype=np.float)
     for i in range(x.shape[1]):
         xs[:, i] = (x[:, i] - mu[month_range[i]])/sigma[month_range[i]]
     return xs
@@ -62,7 +62,7 @@ def scale_to(x, mu, sigma, month_range):
 
 def scale_back(xs, mu, sigma, month_range):
     assert xs.shape[1] == len(month_range)
-    x = np.zeros_like(xs)
+    x = np.zeros_like(xs, dtype=np.float)
     for i in range(xs.shape[1]):
         x[:, i] = xs[:, i]*sigma[month_range[i]] + mu[month_range[i]]
     return x
@@ -84,11 +84,18 @@ def main():
     model = build_mlp(input_dim=12)
     model.summary()
 
-    model.fit(xs_train, ys_train, batch_size=None, epochs=40, validation_split=0.1, verbose=2)
+    model.fit(xs_train, ys_train, batch_size=32, epochs=200, validation_split=0.1, verbose=2)
     ys_pred = model.predict(xs_test)
     y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
     print('rmse: %.3f'%my_metric(y_true, y_pred))
-    # print('score: %.3f'%get_score(x[:, -1, 0], x_pred))
+
+    # import matplotlib.pyplot as plt
+    # for i in range(10):
+    #     plt.plot(y_true[i], label="true", color='green')
+    #     plt.plot(y_pred[i], label='predicted', color='red')
+    #     # plt.plot(x[0][:12], label='origin', color='blue')
+    #     plt.legend(loc='upper left')
+    #     plt.show()
 
 
 if __name__ == '__main__':

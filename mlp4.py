@@ -24,11 +24,11 @@ def preprocess_train_data():
 
 def build_mlp(input_dim):
     input = layers.Input(shape=(input_dim, ))
-    dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(input)
+    dense = layers.Dense(48, activation='sigmoid', kernel_initializer='he_normal')(input)
     dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
     dense = layers.Add()([input, dense])
     dense = layers.Activation('sigmoid')(dense)
-    dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(dense)
+    dense = layers.Dense(48, activation='sigmoid', kernel_initializer='he_normal')(dense)
     output = layers.Dense(input_dim)(dense)
     model = keras.Model(input, output)
     model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
@@ -88,7 +88,8 @@ def main():
     model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
     ys_pred = model.predict(xs_test)
     y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
-    print('rmse: %.3f'%my_metric(y_true, y_pred))
+    rmse = my_metric(y_true, y_pred)
+    print('rmse: %.3f'%rmse)
 
     # import matplotlib.pyplot as plt
     # for i in range(10):
@@ -102,7 +103,7 @@ def main():
     ys_eval = model.predict(xs_eval)
     y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
     y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
-    write_results('Results/year-wise-mlp', y_result)
+    write_results('Results/rmse-%d-year-wise-mlp'%rmse, y_result)
 
 
 if __name__ == '__main__':

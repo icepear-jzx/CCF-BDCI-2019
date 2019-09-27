@@ -107,8 +107,7 @@ class DataParser:
                     Xi is a 2d array of feature indices of each sample in the dataset.
                     Xv is a 2d array of feature values of each sample in the dataset.
         """
-        assert(not self.feat_dict == None, 
-            'gen_feat_dict() or set_feat_dict() must be called before using this function.')
+        assert(not self.feat_dict == None, 'gen_feat_dict() or set_feat_dict() must be called before using this function.')
 
         if filename == None:
             dfi = pd.read_csv(self.filename)
@@ -222,7 +221,7 @@ class DataParser:
 
 
 def write_results(filename, y):
-    time_str = time.strftime('%m-%d-%H-%M',time.localtime(time.time()))
+    time_str = time.strftime('%m-%d-%H:%M',time.localtime(time.time()))
     filename = '%s-%s.csv'%(filename, time_str)
 
     with open('Forecast/evaluation_public.csv', 'r') as f:

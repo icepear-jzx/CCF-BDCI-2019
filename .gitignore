@@ -3,3 +3,5 @@ test.py
 main.py
 *[abc].csv
 evaluation_pure.csv
+rmse*csv
+*mlp*csv

@@ -22,14 +22,14 @@ def preprocess_train_data():
     return np.array(train_list) # 1320 * 24 * 1
 
 
-def build_mlp(input_dim):
+def build_mlp(input_dim, output_dim):
     input = layers.Input(shape=(input_dim, ))
     dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(input)
     dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
     dense = layers.Add()([input, dense])
     dense = layers.Activation('sigmoid')(dense)
     dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
-    output = layers.Dense(input_dim)(dense)
+    output = layers.Dense(output_dim)(dense)
     model = keras.Model(input, output)
     model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
     return model
@@ -75,32 +75,40 @@ def main():
     mu, sigma = scale_fit(x[:, :12])
 
     xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
-    ys_train = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+    ys_train = scale_to(x[:, 12:16], mu, sigma, range(0, 4))
 
-    for i in np.random.choice(1320, 100):
-        print(xs_train[i])
+    xs_test = []
+    y_true = []
+
+    for i in np.random.choice(1220, 100):
+        # print(xs_train[i])
+        xs_test.append(xs_train[i])
+        y_true.append(ys_train[i])
+        # print(i)
+        xs_train = np.delete(xs_train, i, 0)
+        ys_train = np.delete(ys_train, i, 0)
     
-    xs_test = scale_to(x[1000:, :12], mu, sigma, range(0, 12))
-    y_true = x[1000:, 12:]
+    xs_test = np.vstack(xs_test)
+    y_true = np.vstack(y_true)
 
     # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
     # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
 
     print('The shape of input data is ', x.shape)
-    model = build_mlp(input_dim=12)
+    model = build_mlp(input_dim=12, output_dim=4)
     model.summary()
 
     model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
     ys_pred = model.predict(xs_test)
-    y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
-    rmse = my_metric(y_true, y_pred)
+    y_pred = scale_back(ys_pred, mu, sigma, range(0, 4))
+    rmse = my_metric(scale_back(y_true, mu, sigma, range(0, 4)), y_pred)
     print('rmse: %.3f'%rmse)
 
-    xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
-    ys_eval = model.predict(xs_eval)
-    y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
-    y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
-    write_results('Results/rmse-%d-year-wise-mlp'%rmse, y_result)
+    # xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+    # ys_eval = model.predict(xs_eval)
+    # y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
+    # y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
+    # write_results('Results/rmse-%d-year-wise-mlp'%rmse, y_result)
 
 
 if __name__ == '__main__':

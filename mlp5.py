@@ -77,19 +77,19 @@ def main():
     xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
     ys_train = scale_to(x[:, 12:16], mu, sigma, range(0, 4))
 
-    xs_test = []
-    y_true = []
+    # xs_test = []
+    # y_true = []
 
-    for i in np.random.choice(1220, 100):
-        # print(xs_train[i])
-        xs_test.append(xs_train[i])
-        y_true.append(ys_train[i])
-        # print(i)
-        xs_train = np.delete(xs_train, i, 0)
-        ys_train = np.delete(ys_train, i, 0)
+    # for i in np.random.choice(1220, 100):
+    #     # print(xs_train[i])
+    #     xs_test.append(xs_train[i])
+    #     y_true.append(ys_train[i])
+    #     # print(i)
+    #     xs_train = np.delete(xs_train, i, 0)
+    #     ys_train = np.delete(ys_train, i, 0)
     
-    xs_test = np.vstack(xs_test)
-    y_true = np.vstack(y_true)
+    # xs_test = np.vstack(xs_test)
+    # y_true = np.vstack(y_true)
 
     # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
     # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
@@ -99,16 +99,16 @@ def main():
     model.summary()
 
     model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
-    ys_pred = model.predict(xs_test)
-    y_pred = scale_back(ys_pred, mu, sigma, range(0, 4))
-    rmse = my_metric(scale_back(y_true, mu, sigma, range(0, 4)), y_pred)
-    print('rmse: %.3f'%rmse)
+    # ys_pred = model.predict(xs_test)
+    # y_pred = scale_back(ys_pred, mu, sigma, range(0, 4))
+    # rmse = my_metric(scale_back(y_true, mu, sigma, range(0, 4)), y_pred)
+    # print('rmse: %.3f'%rmse)
 
-    # xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
-    # ys_eval = model.predict(xs_eval)
-    # y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
-    # y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
-    # write_results('Results/rmse-%d-year-wise-mlp'%rmse, y_result)
+    xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+    ys_eval = model.predict(xs_eval)
+    y_eval = scale_back(ys_eval, mu, sigma, range(0, 4))
+    y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
+    write_results('Results/ywmlp', y_result)
 
 
 if __name__ == '__main__':

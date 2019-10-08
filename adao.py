@@ -6,14 +6,14 @@ from tqdm import tqdm, tqdm_notebook
 import warnings
 warnings.filterwarnings('ignore')
  
-train_sales_data = pd.read_csv('Train/train_sales_data.csv', engine='python')
-train_search_data = pd.read_csv('Train/train_search_data', engine='python')
-train_user_reply_data = pd.read_csv('Train/train_user_reply_data.csv', engine='python')
-test = pd.read_csv('Forecast/evaluation_public.csv', engine='python')
+train_sales_data = pd.read_csv('Train/train_sales_data.csv')
+train_search_data = pd.read_csv('Train/train_search_data.csv')
+train_user_reply_data = pd.read_csv('Train/train_user_reply_data.csv')
+test = pd.read_csv('Forecast/evaluation_public.csv')
  
 # train_sales_data\train_search_data\train_user_reply_data  拼接
-data = pd.merge(train_sales_data, train_search_data, 'left', on=['province', 'adcode', 'model', 'regYear', 'regMonth'])
-data = pd.merge(data, train_user_reply_data, 'left', on=['model', 'regYear', 'regMonth'])
+data = pd.merge(train_sales_data, train_search_data, how='left', on=['province', 'adcode', 'model', 'regYear', 'regMonth'])
+data = pd.merge(data, train_user_reply_data, how='left', on=['model', 'regYear', 'regMonth'])
  
 # col, col2, col3 中 ，设1.5倍四分位距之外的数据为异常值，用上下四分位数的均值填充
 col, col2, col3 = ['popularity', 'carCommentVolum', 'newsReplyVolum']

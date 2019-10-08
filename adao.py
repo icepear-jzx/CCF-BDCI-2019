@@ -6,11 +6,10 @@ from tqdm import tqdm, tqdm_notebook
 import warnings
 warnings.filterwarnings('ignore')
  
-path = '/个人/比赛/乘用车销量预测'
-train_sales_data = pd.read_csv(path+'/TrainData/train_sales_data.csv', engine='python')
-train_search_data = pd.read_csv(path+'/TrainData/train_search_data.csv', engine='python')
-train_user_reply_data = pd.read_csv(path+'/TrainData/train_user_reply_data.csv', engine='python')
-test = pd.read_csv(path+'/TestPublic/evaluation_public.csv', engine='python')
+train_sales_data = pd.read_csv('Train/train_sales_data.csv', engine='python')
+train_search_data = pd.read_csv('Train/train_search_data', engine='python')
+train_user_reply_data = pd.read_csv('Train/train_user_reply_data.csv', engine='python')
+test = pd.read_csv('Forecast/evaluation_public.csv', engine='python')
  
 # train_sales_data\train_search_data\train_user_reply_data  拼接
 data = pd.merge(train_sales_data, train_search_data, 'left', on=['province', 'adcode', 'model', 'regYear', 'regMonth'])
@@ -151,5 +150,5 @@ for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
     sub_lgb = sub_lgb[['id','forecastVolum']]
     print('lgb中forecastVolmn的0值数量：',(sub_lgb['forecastVolum']==0).sum())
     df_lgb[col_add] = sub_lgb['forecastVolum']
-df_lgb.to_csv(path + "/Result/df_lgb.csv", index=False) 
-# df_lgb有三列值，任一一列提交，上0.57，祝各位好运！！
+df_lgb.to_csv(path + "/Results/dflgb.csv", index=False) 
+# dflgb有三列值，任一一列提交，上0.57，祝各位好运！！

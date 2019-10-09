@@ -78,18 +78,19 @@ def build_mlp():
     car_onehot = layers.Input(shape=(64, ))
     adcode_onehot = layers.Input(shape=(22, ))
 
-    # car_feature = layers.concatenate([popularity, comment, reply])
-    car_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(car_onehot)
-    
-    adcode_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(adcode_onehot)
+    # car_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(car_onehot)
+    # adcode_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(adcode_onehot)
 
-    dense = layers.concatenate([sales, car_embed, adcode_embed])
+    concat = layers.concatenate([sales, popularity, comment, reply])
+    feature = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(concat)
 
+    dense = layers.concatenate([sales, feature])
     dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
-
     output = layers.Dense(12)(dense)
+
     model = keras.Model([sales, popularity, comment, reply, car_onehot, adcode_onehot], output)
     model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
+
     return model
 
 
@@ -154,21 +155,20 @@ def main():
     model.summary()
 
     model.fit([s_train, p_train, c_train, r_train, car_feature_list, adcode_feature_list],
-        y_train, batch_size=32, epochs=300, validation_split=0.01, verbose=2)
+        y_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
     ys_pred = model.predict([s_test, p_test, c_test, r_test, car_feature_list, adcode_feature_list])
     y_pred = scale_back(ys_pred, s_mu, s_sigma, range(12))
     rmse = my_metric(y_true, y_pred)
     print('rmse: %.3f'%rmse)
 
-    # s_eval = scale_to(salesVolume_list[:, 12:], s_mu, s_sigma, range(12))
-    # p_eval = scale_to(popularity_list[:, 12:], p_mu, p_sigma, range(12))
-    # c_eval = scale_to(comment_list[:, 12:], c_mu, c_sigma, range(12))
-    # r_eval = scale_to(reply_list[:, 12:], r_mu, r_sigma, range(12))
-    # ys_eval = model.predict([s_eval, p_eval, c_eval, r_eval, car_feature_list, adcode_feature_list])
-    # ys_eval = model.predict(s_eval)
-    # y_eval = scale_back(ys_eval, s_mu, s_sigma, range(12))
-    # y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
-    # write_results('Results/rmse-%d-all-data-mlp'%rmse, y_result)
+    s_eval = scale_to(salesVolume_list[:, 12:], s_mu, s_sigma, range(12))
+    p_eval = scale_to(popularity_list[:, 12:], p_mu, p_sigma, range(12))
+    c_eval = scale_to(comment_list[:, 12:], c_mu, c_sigma, range(12))
+    r_eval = scale_to(reply_list[:, 12:], r_mu, r_sigma, range(12))
+    ys_eval = model.predict([s_eval, p_eval, c_eval, r_eval, car_feature_list, adcode_feature_list])
+    y_eval = scale_back(ys_eval, s_mu, s_sigma, range(12))
+    y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
+    write_results('Results/rmse-%d-all-data-mlp'%rmse, y_result)
 
 
 if __name__ == '__main__':

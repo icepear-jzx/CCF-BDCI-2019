@@ -1,6 +1,5 @@
 import keras
 from keras import layers
-from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import numpy as np
 import os
@@ -14,23 +13,82 @@ eval_file = 'Forecast/evaluation_public.csv'
 
 def preprocess_train_data():
     df = pd.read_csv(train_file)
-    train_list = []
-    for model in df['model'].unique():
-        for adcode in df['adcode'].unique():
-            index = (df['model'] == model) & (df['adcode'] == adcode)
-            train_list.append(df[['salesVolume']][index].values)
-    return np.array(train_list) # 1320 * 24 * 1
+    salesVolume_list = []
+    popularity_list = []
+    comment_list = []
+    reply_list = []
+    car_feature_list = []
+    adcode_feature_list = []
+
+    models = df['model'].unique()
+    adcodes = df['adcode'].unique()
+    bodyTypes = df['bodyType'].unique()
+    model_list = list(set(df['model']))
+    adcode_list = list(set(df['adcode']))
+    bodyType_list = list(set(df['bodyType']))
+    model_bodyType_df = df[['model','bodyType']].groupby(['model'], as_index=False).first()
+    model_bodyType_map = {}
+    for i in range(len(models)):
+        model = model_bodyType_df.iat[i, 0]
+        bodyType = model_bodyType_df.iat[i, 1]
+        model_bodyType_map[model] = bodyType
+
+    model_onehot_map = {model: [0] * 60 for model in models}
+    bodyType_onehot_map = {bodyType: [0] * 4 for bodyType in bodyTypes}
+    adcode_onehot_map = {adcode: [0] * 22 for adcode in adcodes}
+    for model in models:
+        model_onehot_map[model][model_list.index(model)] = 1
+    for bodyType in bodyTypes:
+        bodyType_onehot_map[bodyType][bodyType_list.index(bodyType)] = 1
+    for adcode in adcodes:
+        adcode_onehot_map[adcode][adcode_list.index(adcode)] = 1
+
+    for model in models:
+        for adcode in adcodes:
+            mask = (df['model'] == model) & (df['adcode'] == adcode)
+            df_mask = df[mask]
+            salesVolume_list.append(df_mask['salesVolume'].values)
+            popularity_list.append(df_mask['popularity'].values)
+            comment_list.append(df_mask['carCommentVolum'].values)
+            reply_list.append(df_mask['newsReplyVolum'].values)
+
+            model_onehot = model_onehot_map[model]
+            bodyType_onehot = bodyType_onehot_map[model_bodyType_map[model]]
+            car_feature = np.hstack((model_onehot, bodyType_onehot))
+            car_feature_list.append(car_feature)
+
+            adcode_onehot = adcode_onehot_map[adcode]
+            adcode_feature_list.append(adcode_onehot)
+    
+    salesVolume_list = np.reshape(np.array(salesVolume_list), (-1, 24)) # 1320 * 24
+    popularity_list = np.reshape(np.array(popularity_list), (-1, 24)) # 1320 *24
+    comment_list = np.reshape(np.array(comment_list), (-1, 24)) # 1320 * 24
+    reply_list = np.reshape(np.array(reply_list), (-1, 24)) # 1320 * 24
+    car_feature_list = np.reshape(np.array(car_feature_list), (-1, 64)) # 1320 * (60 + 4)
+    adcode_feature_list = np.reshape(np.array(adcode_feature_list), (-1, 22)) # 1320 * 22
+
+    return salesVolume_list, popularity_list, comment_list, reply_list, car_feature_list, adcode_feature_list
 
 
-def build_mlp(input_dim, output_dim):
-    input = layers.Input(shape=(input_dim, ))
-    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(input)
-    dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
-    dense = layers.Add()([input, dense])
-    dense = layers.Activation('sigmoid')(dense)
+def build_mlp():
+    sales = layers.Input(shape=(12, ))
+    popularity = layers.Input(shape=(12, ))
+    comment = layers.Input(shape=(12, ))
+    reply = layers.Input(shape=(12, ))
+    car_onehot = layers.Input(shape=(64, ))
+    adcode_onehot = layers.Input(shape=(22, ))
+
+    # car_feature = layers.concatenate([popularity, comment, reply])
+    car_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(car_onehot)
+    
+    adcode_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(adcode_onehot)
+
+    dense = layers.concatenate([sales, car_embed, adcode_embed])
+
     dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
-    output = layers.Dense(output_dim)(dense)
-    model = keras.Model(input, output)
+
+    output = layers.Dense(12)(dense)
+    model = keras.Model([sales, popularity, comment, reply, car_onehot, adcode_onehot], output)
     model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
     return model
 
@@ -70,45 +128,47 @@ def scale_back(xs, mu, sigma, month_range):
 
 
 def main():
-    x = preprocess_train_data()
-    x = np.reshape(x, (-1, 24))
-    mu, sigma = scale_fit(x[:, :12])
+    salesVolume_list, popularity_list, comment_list, reply_list, \
+        car_feature_list, adcode_feature_list = preprocess_train_data()
 
-    xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
-    ys_train = scale_to(x[:, 12:16], mu, sigma, range(0, 4))
+    s_mu, s_sigma = scale_fit(salesVolume_list)
+    s_train = scale_to(salesVolume_list[:, :12], s_mu, s_sigma, range(12))
+    y_train = scale_to(salesVolume_list[:, 12:], s_mu, s_sigma, range(12))
 
-    # xs_test = []
-    # y_true = []
+    p_mu, p_sigma = scale_fit(popularity_list)
+    p_train = scale_to(popularity_list[:, :12], p_mu, p_sigma, range(12))
 
-    # for i in np.random.choice(1220, 100):
-    #     # print(xs_train[i])
-    #     xs_test.append(xs_train[i])
-    #     y_true.append(ys_train[i])
-    #     # print(i)
-    #     xs_train = np.delete(xs_train, i, 0)
-    #     ys_train = np.delete(ys_train, i, 0)
-    
-    # xs_test = np.vstack(xs_test)
-    # y_true = np.vstack(y_true)
+    c_mu, c_sigma = scale_fit(comment_list)
+    c_train = scale_to(comment_list[:, :12], c_mu, c_sigma, range(12))
 
-    # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
-    # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
+    r_mu, r_sigma = scale_fit(reply_list)
+    r_train = scale_to(reply_list[:, :12], r_mu, r_sigma, range(12))
 
-    print('The shape of input data is ', x.shape)
-    model = build_mlp(input_dim=12, output_dim=4)
+    s_test = scale_to(salesVolume_list[1000:, :12], s_mu, s_sigma, range(12))
+    p_test = scale_to(popularity_list[1000:, :12], p_mu, p_sigma, range(12))
+    c_test = scale_to(comment_list[1000:, :12], c_mu, c_sigma, range(12))
+    r_test = scale_to(reply_list[1000:, :12], r_mu, r_sigma, range(12))
+    y_true = salesVolume_list[1000:, 12:]
+
+    model = build_mlp()
     model.summary()
 
-    model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
-    # ys_pred = model.predict(xs_test)
-    # y_pred = scale_back(ys_pred, mu, sigma, range(0, 4))
-    # rmse = my_metric(scale_back(y_true, mu, sigma, range(0, 4)), y_pred)
-    # print('rmse: %.3f'%rmse)
+    model.fit([s_train, p_train, c_train, r_train, car_feature_list, adcode_feature_list],
+        y_train, batch_size=32, epochs=300, validation_split=0.01, verbose=2)
+    ys_pred = model.predict([s_test, p_test, c_test, r_test, car_feature_list, adcode_feature_list])
+    y_pred = scale_back(ys_pred, s_mu, s_sigma, range(12))
+    rmse = my_metric(y_true, y_pred)
+    print('rmse: %.3f'%rmse)
 
-    xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
-    ys_eval = model.predict(xs_eval)
-    y_eval = scale_back(ys_eval, mu, sigma, range(0, 4))
-    y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
-    write_results('Results/ywmlp', y_result)
+    # s_eval = scale_to(salesVolume_list[:, 12:], s_mu, s_sigma, range(12))
+    # p_eval = scale_to(popularity_list[:, 12:], p_mu, p_sigma, range(12))
+    # c_eval = scale_to(comment_list[:, 12:], c_mu, c_sigma, range(12))
+    # r_eval = scale_to(reply_list[:, 12:], r_mu, r_sigma, range(12))
+    # ys_eval = model.predict([s_eval, p_eval, c_eval, r_eval, car_feature_list, adcode_feature_list])
+    # ys_eval = model.predict(s_eval)
+    # y_eval = scale_back(ys_eval, s_mu, s_sigma, range(12))
+    # y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
+    # write_results('Results/rmse-%d-all-data-mlp'%rmse, y_result)
 
 
 if __name__ == '__main__':

@@ -81,16 +81,22 @@ def build_mlp():
     adcode_onehot = layers.Input(shape=(22, ))
 
     car_embed = layers.Dense(4, activation='sigmoid', kernel_initializer='he_normal')(car_onehot)
-    # car_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(car_embed)
+    car_embed = layers.Dense(4, kernel_initializer='he_normal')(car_embed)
 
     adcode_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(adcode_onehot)
-    adcode_embed = layers.Dense(6, activation='sigmoid', kernel_initializer='he_normal')(adcode_embed)
-    
-    feature = layers.concatenate([sales, car_embed, adcode_embed])
-    feature = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(feature)
-    feature = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(feature)
+    adcode_embed = layers.Dense(6, kernel_initializer='he_normal')(adcode_embed)
 
-    dense = layers.concatenate([sales, feature])
+    extra = layers.concatenate([popularity, comment, reply])
+    extra_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(extra)
+    extra_embed = layers.Dense(12, activation='sigmoid', kernel_initializer='he_normal')(extra_embed)
+    
+    feature = layers.concatenate([sales, extra_embed, car_embed, adcode_embed])
+    feature = layers.Activation('sigmoid')(feature)
+    feature = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(feature)
+    feature = layers.Dense(12, kernel_initializer='he_normal')(feature)
+
+    dense = layers.Add()([sales, feature])
+    dense = layers.Activation('sigmoid')(dense)
     dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
     dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
     output = layers.Dense(12)(dense)
@@ -139,17 +145,17 @@ def main():
     salesVolume_list, popularity_list, comment_list, reply_list, \
         car_feature_list, adcode_feature_list = preprocess_train_data()
 
-    s_mu, s_sigma = scale_fit(salesVolume_list)
+    s_mu, s_sigma = scale_fit(salesVolume_list[:12])
     s_train = scale_to(salesVolume_list[:, :12], s_mu, s_sigma, range(12))
     y_train = scale_to(salesVolume_list[:, 12:], s_mu, s_sigma, range(12))
 
-    p_mu, p_sigma = scale_fit(popularity_list)
+    p_mu, p_sigma = scale_fit(popularity_list[:12])
     p_train = scale_to(popularity_list[:, :12], p_mu, p_sigma, range(12))
 
-    c_mu, c_sigma = scale_fit(comment_list)
+    c_mu, c_sigma = scale_fit(comment_list[:12])
     c_train = scale_to(comment_list[:, :12], c_mu, c_sigma, range(12))
 
-    r_mu, r_sigma = scale_fit(reply_list)
+    r_mu, r_sigma = scale_fit(reply_list[:12])
     r_train = scale_to(reply_list[:, :12], r_mu, r_sigma, range(12))
 
     s_test = scale_to(salesVolume_list[:, :12], s_mu, s_sigma, range(12))
@@ -162,7 +168,7 @@ def main():
     model.summary()
 
     model.fit([s_train, p_train, c_train, r_train, car_feature_list, adcode_feature_list],
-        y_train, batch_size=32, epochs=300, validation_split=0, verbose=2)
+        y_train, batch_size=1, epochs=100, validation_split=0, verbose=2)
     ys_pred = model.predict([s_test, p_test, c_test, r_test, car_feature_list, adcode_feature_list])
     y_pred = scale_back(ys_pred, s_mu, s_sigma, range(12))
     rmse = my_metric(y_true, y_pred)

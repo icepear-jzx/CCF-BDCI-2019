@@ -25,11 +25,11 @@ def preprocess_train_data():
 
 def build_mlp(input_dim):
     input = layers.Input(shape=(input_dim, ))
-    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(input)
+    dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(input)
     dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
     dense = layers.Add()([input, dense])
     dense = layers.Activation('sigmoid')(dense)
-    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
+    dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(dense)
     output = layers.Dense(input_dim)(dense)
     model = keras.Model(input, output)
     model.compile(keras.optimizers.Adam(0.01), loss=keras.losses.mse)
@@ -87,7 +87,7 @@ def main():
 
     print('The shape of input data is ', x.shape)
 
-    for i in range(20):
+    for i in range(10):
         model = build_mlp(input_dim=12)
         model.summary()
 

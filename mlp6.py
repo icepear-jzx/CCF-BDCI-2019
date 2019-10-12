@@ -107,7 +107,13 @@ def main():
         xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
         ys_eval = model.predict(xs_eval)
         y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
-        y_result = np.reshape(y_eval[:, :4] + base[:, 24:28], (1320*4), order='F')
+        y_eval = y_eval + base[:, 24:]
+        for j in range(1320):
+            top = x[j][23] + base[j][23]
+            bottom = np.min(y_eval[j][:4])
+            if bottom < 0:
+                y_eval[j][:4] = top - (top - y_eval[j][:4]) * top / (top - bottom)
+        y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
         write_results('Results/mlp6-No.{}'.format(i), y_result)
 
 

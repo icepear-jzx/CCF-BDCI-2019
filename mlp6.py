@@ -99,24 +99,24 @@ def smooth(x):
         upper = (var[:4].max() + var[12:16].max()) / 2
         show = False
         if k < 0:
-            para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower, p0=[1, 10000, 0], maxfev = 1000000)
-            # para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower / 2, p0=[1, 10000, 0], maxfev = 1000000)
+            # para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower, p0=[1, 10000, 0], maxfev = 1000000)
+            para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower / 2, p0=[1, 10000, 0], maxfev = 1000000)
             lam = para[0]
             a = para[1]
             b = para[2]
             base_lower[i] = exp_func(base_x, lam, a, b)
-            base_upper[i] = base_lower[i] - lower + upper
-            # base_upper[i] = base_lower[i] - lower / 2 + upper
+            # base_upper[i] = base_lower[i] - lower + upper
+            base_upper[i] = base_lower[i] - lower / 2 + upper
         elif k > 1:
-            para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper, p0=[1, 200], maxfev = 1000000)
-            # para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper / 2, p0=[1, 200], maxfev = 1000000)
+            # para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper, p0=[1, 200], maxfev = 1000000)
+            para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper / 2, p0=[1, 200], maxfev = 1000000)
             lam = para[0]
             if lam < 1:
                 show = True
             a = para[1]
             base_upper[i] = power_func(base_x, lam, a)
-            base_lower[i] = base_upper[i] - upper + lower
-            # base_lower[i] = base_upper[i] - upper / 2 + lower
+            # base_lower[i] = base_upper[i] - upper + lower
+            base_lower[i] = base_upper[i] - upper / 2 + lower
         else:
             para, _ = curve_fit(line_func, tend_x, tend_y[i], p0=[0, 200], maxfev = 1000000)
             k = para[0]

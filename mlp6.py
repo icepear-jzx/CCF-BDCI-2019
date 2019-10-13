@@ -93,30 +93,30 @@ def smooth(x):
         base_y = line_func(base_x, k, b)
         base[i] = base_y[:]
         var = x[i][:24] - base_y[:24]
-        lower = (var[:12].min() + var[12:].min()) / 2
-        upper = (var[:12].max() + var[12:].max()) / 2
-        # lower = (var[:4].min() + var[12:16].min()) / 2
-        # upper = (var[:4].max() + var[12:16].max()) / 2
+        # lower = (var[:12].min() + var[12:].min()) / 2
+        # upper = (var[:12].max() + var[12:].max()) / 2
+        lower = (var[:4].min() + var[12:16].min()) / 2
+        upper = (var[:4].max() + var[12:16].max()) / 2
         show = False
         if k < 0:
-            # para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower, p0=[1, 10000, 0], maxfev = 1000000)
-            para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower / 2, p0=[1, 10000, 0], maxfev = 1000000)
+            para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower, p0=[1, 10000, 0], maxfev = 1000000)
+            # para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower / 2, p0=[1, 10000, 0], maxfev = 1000000)
             lam = para[0]
             a = para[1]
             b = para[2]
             base_lower[i] = exp_func(base_x, lam, a, b)
-            # base_upper[i] = base_lower[i] - lower + upper
-            base_upper[i] = base_lower[i] - lower / 2 + upper
+            base_upper[i] = base_lower[i] - lower + upper
+            # base_upper[i] = base_lower[i] - lower / 2 + upper
         elif k > 1:
-            # para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper, p0=[1, 200], maxfev = 1000000)
-            para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper / 2, p0=[1, 200], maxfev = 1000000)
+            para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper, p0=[1, 200], maxfev = 1000000)
+            # para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper / 2, p0=[1, 200], maxfev = 1000000)
             lam = para[0]
             if lam < 1:
                 show = True
             a = para[1]
             base_upper[i] = power_func(base_x, lam, a)
-            # base_lower[i] = base_upper[i] - upper + lower
-            base_lower[i] = base_upper[i] - upper / 2 + lower
+            base_lower[i] = base_upper[i] - upper + lower
+            # base_lower[i] = base_upper[i] - upper / 2 + lower
         else:
             para, _ = curve_fit(line_func, tend_x, tend_y[i], p0=[0, 200], maxfev = 1000000)
             k = para[0]
@@ -194,11 +194,11 @@ def main():
                 zoom_lower = (center - lower_revise) / (center - lower)
             if (upper > upper_revise).any():
                 zoom_upper = (center - upper_revise) / (center - upper)
-            zoom = np.min([zoom_lower, zoom_upper], axis=1)
-            # if base_center[j][-1] > base_center[j][0]: # k > 0
-            #     zoom = zoom_upper
-            # else: # k < 0
-            #     zoom = zoom_lower
+            # zoom = np.min([zoom_lower, zoom_upper], axis=1)
+            if base_center[j][-1] > base_center[j][0]: # k > 0
+                zoom = zoom_upper
+            else: # k < 0
+                zoom = zoom_lower
             plt.plot(range(28), np.hstack([x[j] + base[j][:24], y_eval[j][:4]]))
             y_eval[j][:4] = center - (center - y_eval[j][:4]) * zoom
 
@@ -215,7 +215,7 @@ def main():
             #     print(base[j][24:28])
             #     input()
 
-        if y_eval[:, :4].min() < 0:
+        if y_eval[:, :4].min() < -0.1:
             print('Have negative number!')
 
         y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')

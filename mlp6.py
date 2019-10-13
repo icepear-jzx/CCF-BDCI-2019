@@ -70,6 +70,10 @@ def exp_func(x, lam, a, b):
     return a * lam * np.exp(-lam * (x + b))
 
 
+def power_func(x, lam, a):
+    return a * np.power(x + 1, 1/lam)
+
+
 def smooth(x):
     tend_x = np.arange(5.5, 18.5, 1)
     base_x = np.arange(0, 36, 1)
@@ -80,42 +84,66 @@ def smooth(x):
     tend_y = np.array(tend_y).T
 
     base = np.zeros(shape=(1320, 36))
-    base_revise = np.zeros(shape=(1320, 36))
+    base_lower = np.zeros(shape=(1320, 36))
+    base_center = np.zeros(shape=(1320, 36))
+    base_upper = np.zeros(shape=(1320, 36))
     for i in range(0,1320):
-        # para, _ = curve_fit(line_func, tend_x, tend_y[i], p0=[1, 100])
-        # k = para[0]
-        # b = para[1]
         k = (tend_y[i][12] - tend_y[i][0]) / 12
         b = tend_y[i][0] - k * 5.5
-        print(k,b)
         base_y = line_func(base_x, k, b)
         base[i] = base_y[:]
-        # var = np.abs(x[i][:24] - base_y[:24])
-        # var = var.mean()
+        var = x[i][:24] - base_y[:24]
+        lower = (var[:12].min() + var[12:].min()) / 2
+        upper = (var[:12].max() + var[12:].max()) / 2
+        # lower = (var[:4].min() + var[12:16].min()) / 2
+        # upper = (var[:4].max() + var[12:16].max()) / 2
+        show = False
         if k < 0:
-            # para, _ = curve_fit(exp_func, tend_x, tend_y[i] - var, p0=[1, 10000, 0], maxfev = 1000000)
-            para, _ = curve_fit(exp_func, tend_x, tend_y[i], p0=[1, 10000, 0], maxfev = 1000000)
+            # para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower, p0=[1, 10000, 0], maxfev = 1000000)
+            para, _ = curve_fit(exp_func, tend_x, tend_y[i] + lower / 2, p0=[1, 10000, 0], maxfev = 1000000)
             lam = para[0]
             a = para[1]
             b = para[2]
-            base_y = exp_func(base_x, lam, a, b)
-        base_revise[i] = base_y[:]
+            base_lower[i] = exp_func(base_x, lam, a, b)
+            # base_upper[i] = base_lower[i] - lower + upper
+            base_upper[i] = base_lower[i] - lower / 2 + upper
+        elif k > 1:
+            # para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper, p0=[1, 200], maxfev = 1000000)
+            para, _ = curve_fit(power_func, tend_x, tend_y[i] + upper / 2, p0=[1, 200], maxfev = 1000000)
+            lam = para[0]
+            if lam < 1:
+                show = True
+            a = para[1]
+            base_upper[i] = power_func(base_x, lam, a)
+            # base_lower[i] = base_upper[i] - upper + lower
+            base_lower[i] = base_upper[i] - upper / 2 + lower
+        else:
+            para, _ = curve_fit(line_func, tend_x, tend_y[i], p0=[0, 200], maxfev = 1000000)
+            k = para[0]
+            b = para[1]
+            base_center[i] = line_func(base_x, k, b)
+            base_upper[i] = base_center[i] + upper
+            base_lower[i] = base_center[i] + lower
         
         print('fit:', i)
         
-        # plt.plot(range(24), x[i])
-        # plt.plot(tend_x, tend_y[i])
-        # plt.plot(base_x, base_y)
-        # plt.show()
+        if show:
+            plt.plot(range(24), x[i])
+            plt.plot(tend_x, tend_y[i])
+            plt.plot(base_x, base[i])
+            plt.plot(base_x, base_upper[i])
+            plt.plot(base_x, base_lower[i])
+            plt.show()
     
     xs = x - base[:, :24]
-    return xs, base, base_revise
+    base_center = (base_lower + base_upper) / 2
+    return xs, base, base_lower, base_center, base_upper
 
 
 def main():
     x = preprocess_train_data()
     x = np.reshape(x, (-1, 24))
-    x, base, base_revise = smooth(x)
+    x, base, base_lower, base_center, base_upper = smooth(x)
     
     mu, sigma = scale_fit(x)
     xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
@@ -154,17 +182,31 @@ def main():
         # deal with long tail
         for j in range(1320):
             print('zoom:', j)
-            # top = base[j][12] # > bottom bottom_revise
-            top = x[j][23] + base[j][23]
-            bottom = np.min(y_eval[j][:4])
-            bottom_revise = base_revise[j][24:28] # >= 0
-            print(y_eval[j][:4])
-            if bottom < 0:
-                # y_eval[j][:4] = top - (top - y_eval[j][:4]) * top / (top - bottom)
-                if (base_revise[j][24:28] == base[j][24:28]).all(): # k > 0
-                    y_eval[j][:4] = top - (top - y_eval[j][:4]) * (top - 1) / (top - bottom)
-                else: # k < 0
-                    y_eval[j][:4] = top - (top - y_eval[j][:4]) * (top - bottom_revise) / (top - bottom)
+            # print(y_eval[j][:4])
+            upper = np.max(y_eval[j][:4])
+            lower = np.min(y_eval[j][:4])
+            center = base_center[j][24:28]
+            upper_revise = base_upper[j][24:28]
+            lower_revise = base_lower[j][24:28]
+            zoom_upper = np.array([1,1,1,1])
+            zoom_lower = np.array([1,1,1,1])
+            if (lower < lower_revise).any():
+                zoom_lower = (center - lower_revise) / (center - lower)
+            if (upper > upper_revise).any():
+                zoom_upper = (center - upper_revise) / (center - upper)
+            zoom = np.min([zoom_lower, zoom_upper], axis=1)
+            # if base_center[j][-1] > base_center[j][0]: # k > 0
+            #     zoom = zoom_upper
+            # else: # k < 0
+            #     zoom = zoom_lower
+            plt.plot(range(28), np.hstack([x[j] + base[j][:24], y_eval[j][:4]]))
+            y_eval[j][:4] = center - (center - y_eval[j][:4]) * zoom
+
+            # plt.plot(range(28), np.hstack([x[j] + base[j][:24], y_eval[j][:4]]))
+            # plt.plot(range(28), base_center[j][:28])
+            # plt.plot(range(28), base_lower[j][:28])
+            # plt.plot(range(28), base_upper[j][:28])
+            # plt.show()
 
             # if y_eval[j][:4].min() < 0:
             #     print(top)

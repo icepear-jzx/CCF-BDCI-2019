@@ -90,7 +90,10 @@ def smooth(x):
         print(k,b)
         base_y = line_func(base_x, k, b)
         base[i] = base_y[:]
+        # var = np.abs(x[i][:24] - base_y[:24])
+        # var = var.mean()
         if k < 0:
+            # para, _ = curve_fit(exp_func, tend_x, tend_y[i] - var, p0=[1, 10000, 0], maxfev = 1000000)
             para, _ = curve_fit(exp_func, tend_x, tend_y[i], p0=[1, 10000, 0], maxfev = 1000000)
             lam = para[0]
             a = para[1]

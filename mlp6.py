@@ -122,7 +122,7 @@ def smooth(x):
             k = para[0]
             b = para[1]
             base_center[i] = line_func(base_x, k, b)
-            base_upper[i] = base_center[i] + upper
+            base_upper[i] = base_center[i] + upper / 2
             base_lower[i] = base_center[i] + lower
         
         print('fit:', i)

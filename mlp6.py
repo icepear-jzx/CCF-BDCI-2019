@@ -47,19 +47,45 @@ def get_score(y_true, y_pred):
 
 
 def scale_fit(x):
-    mu = np.mean(x)
-    sigma = np.std(x)
+    assert x.shape[1] % 12 == 0
+    mu = np.zeros(shape=(12, ), dtype=np.float)
+    sigma = np.zeros(shape=(12, ), dtype=np.float)
+    for i in range(12):
+        mu[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
+        sigma[i] = np.std(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
     return mu, sigma
 
 
 def scale_to(x, mu, sigma, month_range):
-    xs = (x - mu) / sigma
+    assert x.shape[1] == len(month_range)
+    xs = np.zeros_like(x, dtype=np.float)
+    for i in range(x.shape[1]):
+        xs[:, i] = (x[:, i] - mu[month_range[i]])/sigma[month_range[i]]
     return xs
 
 
 def scale_back(xs, mu, sigma, month_range):
-    x = xs * sigma + mu
+    assert xs.shape[1] == len(month_range)
+    x = np.zeros_like(xs, dtype=np.float)
+    for i in range(xs.shape[1]):
+        x[:, i] = xs[:, i]*sigma[month_range[i]] + mu[month_range[i]]
     return x
+
+
+# def scale_fit(x):
+#     mu = np.mean(x)
+#     sigma = np.std(x)
+#     return mu, sigma
+
+
+# def scale_to(x, mu, sigma, month_range):
+#     xs = (x - mu) / sigma
+#     return xs
+
+
+# def scale_back(xs, mu, sigma, month_range):
+#     x = xs * sigma + mu
+#     return x
 
 
 def line_func(x, k, b):

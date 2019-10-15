@@ -21,7 +21,7 @@ train_sales  = pd.read_csv('Train/train_sales_data.csv')
 train_search = pd.read_csv('Train/train_search_data.csv')
 train_user   = pd.read_csv('Train/train_user_reply_data.csv')
 evaluation_public = pd.read_csv('Forecast/evaluation_public.csv')
-submit_example    = pd.read_csv('Forecast/submit_example.csv')
+submit_example    = pd.read_csv('Example/submit_example.csv')
 data = pd.concat([train_sales, evaluation_public], ignore_index=True)
 data = data.merge(train_search, 'left', on=['province', 'adcode', 'model', 'regYear', 'regMonth'])
 data = data.merge(train_user, 'left', on=['model', 'regYear', 'regMonth'])
@@ -128,7 +128,7 @@ def get_train_model(df_, m, m_type='lgb'):
 
 
 for month in [25,26,27,28]: 
-    m_type = 'lgb' 
+    m_type = 'xgb' 
     
     data_df, stat_feat = get_stat_feature(data)
     

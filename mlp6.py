@@ -201,7 +201,9 @@ def main():
             #     zoom = zoom_lower
             # plt.plot(range(28), np.hstack([x[j] + base[j][:24], y_eval[j][:4]]))
             y_eval[j][:4] = center - (center - y_eval[j][:4]) * zoom
-
+            # bottom = np.min(y_eval[j][:4])
+            # if bottom < 0:
+            #     y_eval[j][:4] = center - (center - y_eval[j][:4]) * (center - 1) / (center - bottom)
             # plt.plot(range(28), np.hstack([x[j] + base[j][:24], y_eval[j][:4]]))
             # plt.plot(range(28), base_center[j][:28])
             # plt.plot(range(28), base_lower[j][:28])

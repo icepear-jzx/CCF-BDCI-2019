@@ -191,10 +191,12 @@ def main():
             zoom_upper = np.array([1,1,1,1])
             zoom_lower = np.array([1,1,1,1])
             if (lower < lower_revise).any():
-                zoom_lower = (center - lower_revise) / (center - lower)
+                zoom_lower = (center - lower_revise) / (center - y_eval[j][:4])
             if (upper > upper_revise).any():
-                zoom_upper = (center - upper_revise) / (center - upper)
-            zoom = np.min([zoom_lower, zoom_upper], axis=0)
+                zoom_upper = (center - upper_revise) / (center - y_eval[j][:4])
+            zoom = np.vstack([zoom_lower, zoom_upper])
+            zoom = zoom[zoom > 0].min()
+            # zoom = np.min([zoom_lower, zoom_upper], axis=0)
             # if base_center[j][-1] > base_center[j][0]: # k > 0
             #     zoom = zoom_upper
             # else: # k < 0

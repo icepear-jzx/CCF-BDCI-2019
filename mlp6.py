@@ -151,8 +151,6 @@ def main():
     xs_test = scale_to(x[:, :12], mu, sigma, range(0, 12))
     y_true = x[:, 12:]
 
-    # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
-    # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
 
     print('The shape of input data is ', x.shape)
 

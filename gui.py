@@ -25,6 +25,7 @@ def draw(data, ylabel=None, filter={}, ifshow=False):
 
     # sum the data with same regDate
     data = data.groupby(data['regDate']).sum()
+    # data['salesVolume'] = data['salesVolume'] / data['salesVolume'].mean()
 
     # regDates are mapped to 1 ~ len(column)
     data.index = range(1, data.shape[0] + 1)
@@ -51,20 +52,25 @@ def show_all_salesVolume(col, ifshowlabel=False):
     plt.show()
 
 
-def show_all_popularity(col, ifshowlabel=False):
+def show_all_popularity(col, ifshowlabel=False, step_by_step=False):
 
     # read data
+    path = 'Train/train_sales_data.csv'
+    with open(path, 'r') as f:
+        data_s = pd.read_csv(f)
+    
     path = 'Train/train_search_data.csv'
     with open(path, 'r') as f:
         data = pd.read_csv(f)
 
-    for item in set(data[col]):
-        draw(data.copy(), filter={col: item})
-
-    plt.title('popularity of all {}s'.format(col))
-    if ifshowlabel:
-        plt.legend()
-    plt.show()
+    if step_by_step:
+        for item in set(data[col]):
+            for adcode in list(set(data['adcode']))[:2]:
+                plt.title('popularity of all {}s'.format(col))
+                draw(data_s.copy(), filter={col: item, 'adcode': adcode})
+                draw(data.copy(), filter={col: item, 'adcode': adcode})
+                plt.legend()
+                plt.show()
 
 
 def show_all_carCommentVolum(col, ifshowlabel=False):
@@ -75,7 +81,9 @@ def show_all_carCommentVolum(col, ifshowlabel=False):
         data = pd.read_csv(f)
 
     for item in set(data[col]):
-        draw(data.copy(), filter={col: item})
+        draw(data.copy(), ylabel='carCommentVolum', filter={col: item})
+        draw(data.copy(), ylabel='newsReplyVolum', filter={col: item})
+        plt.show()
 
     plt.title('carCommentVolum of all {}s'.format(col))
     if ifshowlabel:
@@ -189,12 +197,16 @@ def show_forecast_compare(col, paths, step_by_step=False):
     # draw
     plt.title('forecasting of all {}s'.format(col))
     if step_by_step:
-        for item in set(data_set[0][col]):
-            for data in data_set:
-                draw(data.copy(), filter={col: item})
-            plt.axvline(24)
-            # show
-            plt.show()
+        # for item in set(data_set[0][col]):
+        for item in ['3c974920a76ac9c1']:
+            for adcode in list(set(data_set[0]['adcode']))[:1]:
+                for data in data_set:
+                    draw(data.copy(), filter={col: item})
+                plt.axvline(24)
+                # plt.ylim(0, 3)
+                plt.legend(loc='upper left')
+                # show
+                plt.show()
     else:
         for item in set(data_set[0][col]):
             for data in data_set:
@@ -204,8 +216,40 @@ def show_forecast_compare(col, paths, step_by_step=False):
         plt.show()
 
 
-# show_all_salesVolume(col='model')
+def regYear_compare(col, path):
+    # read data
+    with open(path, 'r') as f:
+        result_data = pd.read_csv(f)
+    with open('Train/train_sales_data.csv', 'r') as f:
+        train_data = pd .read_csv(f)
+    with open('Forecast/evaluation_public.csv', 'r') as f:
+        forecast_data = pd.read_csv(f)
+    
+    # merge data
+    del forecast_data['forecastVolum']
+    model_bodyType = train_data[['model','bodyType']].groupby(['model'], as_index=False).first()
+    data_set = []
+    data = pd.merge(forecast_data, result_data, on=['id'])
+    data.rename(columns={'forecastVolum': 'salesVolume'}, inplace=True)
+    del data['id']
+    data = pd.merge(data, model_bodyType, on='model', how='left')
+    data = pd.concat([train_data, data], sort=False)
+    data_set.append(data)
+
+    # draw
+    for item in set(data_set[0][col]):
+        for adcode in list(set(data_set[0]['adcode']))[:]:
+            for data in data_set:
+                draw(data.copy(), filter={col: item, 'adcode': adcode})
+            plt.legend(loc='upper left')
+            plt.ylim(0,3)
+            # show
+            plt.show()
+
+
+# show_all_carCommentVolum(col='model')
 # show_all_rate()
 # show_forecast(col='model', path='Results/rmse-60-all-data-mlp-10-10-11:43.csv')
-show_forecast_compare(col='model', paths=['Results/ywmlp-0.527.csv', 
-    'Results/mlp4-fuse.csv', 'Results/fuse-0.58375.csv'], step_by_step=True)
+show_forecast_compare(col='model', paths=['Results/fuse-0.6003.csv', 
+    'Results/mlp7-fuse-0.5463.csv'], step_by_step=True)
+# regYear_compare(col='model', path='Results/fuse-0.5998.csv')

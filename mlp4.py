@@ -24,11 +24,11 @@ def preprocess_train_data():
 
 def build_mlp(input_dim):
     input = layers.Input(shape=(input_dim, ))
-    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(input)
+    dense = layers.Dense(36, activation='sigmoid', kernel_initializer='he_normal')(input)
     dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
     dense = layers.Add()([input, dense])
     dense = layers.Activation('sigmoid')(dense)
-    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
+    dense = layers.Dense(36, activation='sigmoid', kernel_initializer='he_normal')(dense)
     output = layers.Dense(input_dim)(dense)
     model = keras.Model(input, output)
     model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
@@ -49,7 +49,7 @@ def scale_fit(x):
     sigma = np.zeros(shape=(12, ), dtype=np.float)
     for i in range(12):
         mu[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
-        sigma[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
+        sigma[i] = np.std(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
     return mu, sigma
 
 
@@ -75,35 +75,37 @@ def main():
     mu, sigma = scale_fit(x[:, :12])
     xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
     ys_train = scale_to(x[:, 12:], mu, sigma, range(0, 12))
-    xs_test = scale_to(x[1000:, :12], mu, sigma, range(0, 12))
-    y_true = x[1000:, 12:]
+    xs_test = scale_to(x[:, :12], mu, sigma, range(0, 12))
+    y_true = x[:, 12:]
 
     # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
     # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
 
     print('The shape of input data is ', x.shape)
-    model = build_mlp(input_dim=12)
-    model.summary()
 
-    model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
-    ys_pred = model.predict(xs_test)
-    y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
-    rmse = my_metric(y_true, y_pred)
-    print('rmse: %.3f'%rmse)
+    for i in range(10):
+        model = build_mlp(input_dim=12)
+        model.summary()
 
-    # import matplotlib.pyplot as plt
-    # for i in range(10):
-    #     plt.plot(y_true[i], label="true", color='green')
-    #     plt.plot(y_pred[i], label='predicted', color='red')
-    #     # plt.plot(x[0][:12], label='origin', color='blue')
-    #     plt.legend(loc='upper left')
-    #     plt.show()
+        model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0, verbose=2)
+        ys_pred = model.predict(xs_test)
+        y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
+        rmse = my_metric(y_true, y_pred)
+        print('rmse: %.3f'%rmse)
 
-    xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
-    ys_eval = model.predict(xs_eval)
-    y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
-    y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
-    write_results('Results/rmse-%d-year-wise-mlp'%rmse, y_result)
+        # import matplotlib.pyplot as plt
+        # for i in range(0,1320,100):
+        #     plt.plot(y_true[i], label="true", color='green')
+        #     plt.plot(y_pred[i], label='predicted', color='red')
+        #     # plt.plot(x[0][:12], label='origin', color='blue')
+        #     plt.legend(loc='upper left')
+        #     plt.show()
+
+        xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+        ys_eval = model.predict(xs_eval)
+        y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
+        y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
+        write_results('Results/mlp4-No.{}'.format(i), y_result)
 
 
 if __name__ == '__main__':

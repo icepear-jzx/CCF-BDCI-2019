@@ -222,7 +222,7 @@ class DataParser:
 
 def write_results(filename, y):
     time_str = time.strftime('%m-%d-%H:%M',time.localtime(time.time()))
-    filename = '%s-%s.csv'%(filename, time_str)
+    filename = '%s.csv'%(filename)
 
     with open('Forecast/evaluation_public.csv', 'r') as f:
         forecast_data = pd.read_csv(f)

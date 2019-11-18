@@ -17,6 +17,10 @@ def exp_func(x, lam, a, b):
     return a * lam * np.exp(-lam * (x + b))
 
 
+def power_func(x, lam, a):
+    return a * np.power(x + 1, 1/lam)
+
+
 train_file = 'Train/train_extra_data.csv'
 eval_file = 'Forecast/evaluation_public.csv'
 
@@ -50,30 +54,55 @@ for i in range(0,1320):
     k = para[0]
     b = para[1]
     base_y = line_func(base_x, k, b)
-    show = False
-    if base_y.min() < 0:
-        # para, _ = curve_fit(normal_func, tend_x, tend_y[i], p0=[10000, -10, 16], maxfev = 1000000)
-        # a = para[0]
-        # u = para[1]
-        # sig = para[2]
-        # base_y = normal_func(base_x, a, u, sig)
-        para, _ = curve_fit(exp_func, tend_x, tend_y[i], p0=[1, 10000, 0], maxfev = 1000000)
+    var = np.abs(y[i][:24] - base_y[:24])
+    var = var.mean()
+    show = True
+    if k < 0:
+        para, _ = curve_fit(exp_func, tend_x, tend_y[i]-var, p0=[1, 10000, 0], maxfev = 1000000)
         print(para)
         lam = para[0]
         a = para[1]
         b = para[2]
         base_y = exp_func(base_x, lam, a, b)
         # show = True
+    elif k > 1:
+        # para, _ = curve_fit(normal_func, tend_x, tend_y[i], p0=[10000, -10, 16], maxfev = 1000000)
+        # a = para[0]
+        # u = para[1]
+        # sig = para[2]
+        # base_y = normal_func(base_x, a, u, sig)
+        para, _ = curve_fit(power_func, tend_x, tend_y[i] + var, p0=[1, 200], maxfev = 1000000)
+        print(para)
+        lam = para[0]
+        a = para[1]
+        base_y = power_func(base_x, lam, a)
+        # show = True
+        if lam < 1:
+            show = True
     
+    # var = np.abs(y[i][:24] - base_y[:24])
+    # var = var.mean()
+        
+    # upper_y = base_y + var
+    # lower_y = base_y - var
+
     for j in range(12):
-        y[i][24+j] = (0.25*y[i][11+j] + 0.5*y[i][12+j] + 0.25*y[i][13+j]) * base_y[24+j] / base_y[12+j]
-        # y[i][24+j] = (y[i][12+j]) * base_y[24+j] / base_y[12+j]
+        # y[i][24+j] = 6 * (base_y[18+j] + base_y[19+j]) - y[i][13+j:24+j].sum()
+        y[i][24+j] = (0.25 * y[i][11+j] + 0.5 * y[i][12+j] + 0.25 * y[i][13+j]) * base_y[24+j] / base_y[12+j]
+    
+    # y[i, 24:28] = 0.5 * y[i, 24:28] + 0.5 * upper_y[24:28]
+    # y[i, 24:28] = upper_y[24:28]
+    # for j in range(12):
+    #     if np.abs(y[i][24+j]-base_y[24+j]) > np.abs(upper_y[24+j]-base_y[24+j]):
+    #         y[i][24+j] = upper_y[24+j]
 
     if show:
         plt.axvline(23)
-        plt.plot(range(36), y[i])
         plt.plot(tend_x, tend_y[i])
         plt.plot(base_x, base_y)
+        # plt.plot(base_x, lower_y)
+        # plt.plot(base_x, upper_y)
+        plt.plot(range(36), y[i])
         plt.show()
 
 y_result = np.reshape(y[:, 24:28], (1320*4), order='F')

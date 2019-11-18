@@ -44,6 +44,9 @@ data['md_ry_mean'] = data.groupby(['model','regYear'])['salesVolume'].transform(
 '''
 # 测试集并入
 data = pd.concat([data, test], ignore_index=True)
+# data['label'] = np.log(data['salesVolume'])
+# for col in ['carCommentVolum','newsReplyVolum','popularity','bt_ry_mean','ad_ry_mean', 'md_ry_mean']:
+#     data[col] = np.log(data[col])
 data['label'] = data['salesVolume']
 data['id'] = data['id'].fillna(0).astype(int)
 del data['salesVolume'], data['forecastVolum']
@@ -120,6 +123,7 @@ for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
     test_idx = (data['mt'] > 24) # 大于24个月的是测试集
  
     # label
+    # data['n_label'] = data['label']
     data['n_label'] = np.log(data['label'])
  
     train_x = data[train_idx][features]
@@ -136,6 +140,7 @@ for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
  
     lgb_model.fit(train_x, train_y, eval_set=[(valid_x, valid_y)],
                   categorical_feature=cate_feat, early_stopping_rounds=100, verbose=300)
+    # data['pred_label'] = lgb_model.predict(data[features])
     data['pred_label'] = np.e ** lgb_model.predict(data[features])
     model = lgb_model
     # 特征重要程度
@@ -149,6 +154,6 @@ for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
     sub_lgb = sub.reset_index(drop=True)
     sub_lgb = sub_lgb[['id','forecastVolum']]
     print('lgb中forecastVolmn的0值数量：',(sub_lgb['forecastVolum']==0).sum())
-    df_lgb[col_add] = sub_lgb['forecastVolum']
-df_lgb.to_csv(path + "/Results/dflgb.csv", index=False) 
+    df_lgb['forecastVolum'] = sub_lgb['forecastVolum']
+    df_lgb.to_csv("Results/dflgb_{}.csv".format(col_add), index=False) 
 # dflgb有三列值，任一一列提交，上0.57，祝各位好运！！

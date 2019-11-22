@@ -1,63 +1,116 @@
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-import matplotlib.pyplot as plt
+import keras
+from keras import layers
+from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import numpy as np
+import os
+from dataparser import write_results
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+train_file = 'Train/train_extra_data.csv'
+eval_file = 'Forecast/evaluation_public.csv'
 
 
-def standardization(data):
-    mu = np.mean(data, axis=0)
-    sigma = np.std(data, axis=0)
-    return (data - mu) / sigma, mu, sigma
+def preprocess_train_data():
+    df = pd.read_csv(train_file)
+    train_list = []
+    for model in df['model'].unique():
+        for adcode in df['adcode'].unique():
+            index = (df['model'] == model) & (df['adcode'] == adcode)
+            train_list.append(df[['salesVolume']][index].values)
+    return np.array(train_list) # 1320 * 24 * 1
 
-with open('Train/train_all_data.csv', 'r') as f:
-    raw_data = pd.read_csv(f)
 
-input_raw_data = raw_data[(raw_data.regYear == 2016) | (raw_data.regMonth < 9)]
-output_raw_data = raw_data[(raw_data.regYear == 2017) & (raw_data.regMonth >= 9)]
+def build_mlp(input_dim):
+    input = layers.Input(shape=(input_dim, ))
+    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(input)
+    dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
+    dense = layers.Add()([input, dense])
+    dense = layers.Activation('sigmoid')(dense)
+    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
+    output = layers.Dense(input_dim)(dense)
+    model = keras.Model(input, output)
+    model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
+    return model
 
-X_list = []
-Y_list = []
 
-for model in set(input_raw_data.model):
-    X_i = input_raw_data[input_raw_data.model == model]
-    bodyType = X_i.iloc[0].bodyType
-    for adcode in set(X_i.adcode):
-        # print('model:', model)
-        # print('bodyType:', bodyType)
-        # print('adcode:', adcode)
-        X_ir = X_i[X_i.adcode == adcode]
-        X_ir = X_ir[['regYear', 'regMonth', 'salesVolume', 'popularity', 'carCommentVolum', 'newsReplyVolum']]
-        X_ir = X_ir.values.reshape(-1, 20, 6, 1)
-        Y_ir = output_raw_data[(output_raw_data.model == model) & (output_raw_data.adcode == adcode)]['salesVolume']
-        Y_ir = Y_ir.values.reshape(-1, 4)
-        # print('X_ir:\n', X_ir)
-        # print('Y_ir:\n', Y_ir)
-        X_list.append(X_ir)
-        Y_list.append(Y_ir)
+def build_cnn(input_dim):
+    input = layers.Input(shape=(input_dim, ))
+    conv = layers.LocallyConnected1D(1, 3, padding='same')
+    
 
-x_train = np.vstack(X_list)
-x_train, _, _ = standardization(x_train)
-y_train = np.vstack(Y_list)
-y_train, mu, sigma = standardization(y_train)
-print(x_train.shape, y_train.shape)
 
-model = keras.Sequential()
+def my_metric(y_true, y_pred):
+    return np.mean(np.abs(y_true - y_pred))
 
-model.add(layers.Conv2D(input_shape=(x_train.shape[1], x_train.shape[2], x_train.shape[3]),
-    filters=32, kernel_size=(3,3), strides=(1,1), padding='valid',
-    activation='relu'))
-model.add(layers.MaxPool2D(pool_size=(2,2)))
-model.add(layers.Flatten())
-model.add(layers.Dense(32, use_bias=True, activation='relu'))
-model.add(layers.Dense(4, use_bias=True, activation='softmax'))
 
-model.compile(optimizer=keras.optimizers.Adam(0.01),
-    loss=keras.losses.MSE,
-    metrics=['mse'])
-model.summary()
+def get_score(y_true, y_pred):
+    return 1 - np.sum(np.abs(y_pred-y_true)/y_true)/60
 
-history = model.fit(x_train, y_train, batch_size=64, epochs=50)
 
-res = model.evaluate(x_train, y_train)
+def scale_fit(x):
+    assert x.shape[1] % 12 == 0
+    mu = np.zeros(shape=(12, ), dtype=np.float)
+    sigma = np.zeros(shape=(12, ), dtype=np.float)
+    for i in range(12):
+        mu[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
+        sigma[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
+    return mu, sigma
+
+
+def scale_to(x, mu, sigma, month_range):
+    assert x.shape[1] == len(month_range)
+    xs = np.zeros_like(x, dtype=np.float)
+    for i in range(x.shape[1]):
+        xs[:, i] = (x[:, i] - mu[month_range[i]])/sigma[month_range[i]]
+    return xs
+
+
+def scale_back(xs, mu, sigma, month_range):
+    assert xs.shape[1] == len(month_range)
+    x = np.zeros_like(xs, dtype=np.float)
+    for i in range(xs.shape[1]):
+        x[:, i] = xs[:, i]*sigma[month_range[i]] + mu[month_range[i]]
+    return x
+
+
+def main():
+    x = preprocess_train_data()
+    x = np.reshape(x, (-1, 24))
+    mu, sigma = scale_fit(x[:, :12])
+    xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
+    ys_train = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+    xs_test = scale_to(x[1000:, :12], mu, sigma, range(0, 12))
+    y_true = x[1000:, 12:]
+
+    # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
+    # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])
+
+    print('The shape of input data is ', x.shape)
+    model = build_cnn(input_dim=12)
+    model.summary()
+
+    model.fit(xs_train, ys_train, batch_size=16, epochs=350, validation_split=0.1, verbose=2)
+    ys_pred = model.predict(xs_test)
+    y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
+    rmse = my_metric(y_true, y_pred)
+    print('rmse: %.3f'%rmse)
+
+    # import matplotlib.pyplot as plt
+    # for i in range(10):
+    #     plt.plot(y_true[i], label="true", color='green')
+    #     plt.plot(y_pred[i], label='predicted', color='red')
+    #     # plt.plot(x[0][:12], label='origin', color='blue')
+    #     plt.legend(loc='upper left')
+    #     plt.show()
+
+    xs_eval = scale_to(x[:, 12:], mu, sigma, range(0, 12))
+    ys_eval = model.predict(xs_eval)
+    y_eval = scale_back(ys_eval, mu, sigma, range(0, 12))
+    y_result = np.reshape(y_eval[:, :4], (1320*4), order='F')
+    write_results('Results/rmse-%d-cnn'%rmse, y_result)
+
+
+if __name__ == '__main__':
+    main()

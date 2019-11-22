@@ -85,7 +85,7 @@ def main():
     model = build_mlp(input_dim=12)
     model.summary()
 
-    model.fit(xs_train, ys_train, batch_size=32, epochs=300, validation_split=0.1, verbose=2)
+    model.fit(xs_train, ys_train, batch_size=16, epochs=350, validation_split=0.1, verbose=2)
     ys_pred = model.predict(xs_test)
     y_pred = scale_back(ys_pred, mu, sigma, range(0, 12))
     rmse = my_metric(y_true, y_pred)

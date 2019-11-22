@@ -23,12 +23,14 @@ def preprocess_train_data():
 
 
 def build_cnn(input_dim):
-    model = keras.Sequential()
-    model.add(layers.Conv1D(1, (4), input_shape=(input_dim, 1)))
-    model.add(layers.Conv1D(1, (4)))
-    model.add(layers.MaxPool1D())
-    model.add(layers.Flatten(input_shape=()))
-    model.add(layers.Dense(input_dim))
+    inputs = layers.Input(shape=(input_dim, 1))
+    conv = layers.Conv1D(1, (3), padding='same', input_shape=(input_dim, 1))(inputs)
+    # model.add(layers.Conv1D(1, (4)))
+    # model.add(layers.MaxPool1D())
+    conv = layers.Flatten()(conv)
+    dense = layers.Dense(input_dim)(conv)
+
+    model = keras.Model(inputs, dense)
     model.compile(keras.optimizers.adam(1e-2), keras.losses.mse)
     return model
 

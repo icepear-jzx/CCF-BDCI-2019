@@ -24,11 +24,11 @@ def preprocess_train_data():
 
 def build_mlp(input_dim):
     input = layers.Input(shape=(input_dim, ))
-    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(input)
+    dense = layers.Dense(36, activation='sigmoid', kernel_initializer='he_normal')(input)
     dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
     dense = layers.Add()([input, dense])
     dense = layers.Activation('sigmoid')(dense)
-    dense = layers.Dense(24, activation='sigmoid', kernel_initializer='he_normal')(dense)
+    dense = layers.Dense(36, activation='sigmoid', kernel_initializer='he_normal')(dense)
     output = layers.Dense(input_dim)(dense)
     model = keras.Model(input, output)
     model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
@@ -49,7 +49,7 @@ def scale_fit(x):
     sigma = np.zeros(shape=(12, ), dtype=np.float)
     for i in range(12):
         mu[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
-        sigma[i] = np.mean(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
+        sigma[i] = np.std(x[:, [i + 12 * j for j in range(x.shape[1]//12)]])
     return mu, sigma
 
 
@@ -75,8 +75,8 @@ def main():
     mu, sigma = scale_fit(x[:, :12])
     xs_train = scale_to(x[:, :12], mu, sigma, range(0, 12))
     ys_train = scale_to(x[:, 12:], mu, sigma, range(0, 12))
-    xs_test = scale_to(x[1000:, :12], mu, sigma, range(0, 12))
-    y_true = x[1000:, 12:]
+    xs_test = scale_to(x[:, :12], mu, sigma, range(0, 12))
+    y_true = x[:, 12:]
 
     # xs_train = np.vstack([xs_train[:, 0:4], xs_train[:, 4:8], xs_train[:, 8:12]])
     # ys_train = np.vstack([ys_train[:, 0:4], ys_train[:, 4:8], ys_train[:, 8:12]])

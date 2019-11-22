@@ -5,15 +5,22 @@ from sklearn.metrics import mean_squared_error as mse
 from tqdm import tqdm, tqdm_notebook
 import warnings
 warnings.filterwarnings('ignore')
- 
-train_sales_data = pd.read_csv('Train/train_sales_data.csv')
-train_search_data = pd.read_csv('Train/train_search_data.csv')
-train_user_reply_data = pd.read_csv('Train/train_user_reply_data.csv')
-test = pd.read_csv('Forecast/evaluation_public.csv')
- 
+
+path='./Train/'
+train_sales_data = pd.read_csv(path+'train_sales_data.csv')
+train_search_data = pd.read_csv(path+'train_search_data.csv')
+train_user_reply_data = pd.read_csv(path+'train_user_reply_data.csv')
+test = pd.read_csv('./Forecast/evaluation_public.csv')
+'''
+path = '/个人/比赛/乘用车销量预测'
+train_sales_data = pd.read_csv(path+'/TrainData/train_sales_data.csv', engine='python')
+train_search_data = pd.read_csv(path+'/TrainData/train_search_data.csv', engine='python')
+train_user_reply_data = pd.read_csv(path+'/TrainData/train_user_reply_data.csv', engine='python')
+test = pd.read_csv(path+'/TestPublic/evaluation_public.csv', engine='python')
+'''
 # train_sales_data\train_search_data\train_user_reply_data  拼接
-data = pd.merge(train_sales_data, train_search_data, how='left', on=['province', 'adcode', 'model', 'regYear', 'regMonth'])
-data = pd.merge(data, train_user_reply_data, how='left', on=['model', 'regYear', 'regMonth'])
+data = pd.merge(train_sales_data, train_search_data, 'left', on=['province', 'adcode', 'model', 'regYear', 'regMonth'])
+data = pd.merge(data, train_user_reply_data, 'left', on=['model', 'regYear', 'regMonth'])
  
 # col, col2, col3 中 ，设1.5倍四分位距之外的数据为异常值，用上下四分位数的均值填充
 col, col2, col3 = ['popularity', 'carCommentVolum', 'newsReplyVolum']
@@ -44,9 +51,6 @@ data['md_ry_mean'] = data.groupby(['model','regYear'])['salesVolume'].transform(
 '''
 # 测试集并入
 data = pd.concat([data, test], ignore_index=True)
-# data['label'] = np.log(data['salesVolume'])
-# for col in ['carCommentVolum','newsReplyVolum','popularity','bt_ry_mean','ad_ry_mean', 'md_ry_mean']:
-#     data[col] = np.log(data[col])
 data['label'] = data['salesVolume']
 data['id'] = data['id'].fillna(0).astype(int)
 del data['salesVolume'], data['forecastVolum']
@@ -123,7 +127,6 @@ for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
     test_idx = (data['mt'] > 24) # 大于24个月的是测试集
  
     # label
-    # data['n_label'] = data['label']
     data['n_label'] = np.log(data['label'])
  
     train_x = data[train_idx][features]
@@ -140,12 +143,11 @@ for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
  
     lgb_model.fit(train_x, train_y, eval_set=[(valid_x, valid_y)],
                   categorical_feature=cate_feat, early_stopping_rounds=100, verbose=300)
-    # data['pred_label'] = lgb_model.predict(data[features])
     data['pred_label'] = np.e ** lgb_model.predict(data[features])
     model = lgb_model
     # 特征重要程度
-    print ('lgb特征重要程度：',sorted(dict(zip(train_x.columns,model.feature_importances_)).items(),key=lambda x: x[1], reverse=True))
-    print('NRMSE的均值:',score(data = data[valid_idx]))
+    print ('lgb Features:',sorted(dict(zip(train_x.columns,model.feature_importances_)).items(),key=lambda x: x[1], reverse=True))
+    print('AVE NRMSE:',score(data = data[valid_idx]))
     model.n_estimators = model.best_iteration_
     model.fit(data[~test_idx][features], data[~test_idx]['n_label'], categorical_feature=cate_feat)
     data['forecastVolum'] = np.e ** model.predict(data[features])
@@ -153,7 +155,8 @@ for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
     sub['forecastVolum'] = data[test_idx]['forecastVolum'].apply(lambda x: 0 if x < 0 else x).round().astype(int)
     sub_lgb = sub.reset_index(drop=True)
     sub_lgb = sub_lgb[['id','forecastVolum']]
-    print('lgb中forecastVolmn的0值数量：',(sub_lgb['forecastVolum']==0).sum())
-    df_lgb['forecastVolum'] = sub_lgb['forecastVolum']
-    df_lgb.to_csv("Results/dflgb_{}.csv".format(col_add), index=False) 
-# dflgb有三列值，任一一列提交，上0.57，祝各位好运！！
+    #print('lgb中forecastVolmn:',(sub_lgb['forecastVolum']==0).sum())
+    df_lgb[col_add] = sub_lgb['forecastVolum']
+    
+df_lgb.to_csv("Results/df_lgb.csv", index=False) 
+# df_lgb有三列值，任一一列提交，上0.57，祝各位好运！！

@@ -6,3 +6,4 @@ evaluation_pure.csv
 rmse*csv
 dfm*csv
 tf1/
+.DS_Store

@@ -8,7 +8,7 @@
 
 | 姓名 | 学号 | 分工 |
 | :---: | :--------: | :-----------------: |
-| 金哲欣 | PB17111663 | MLP、协同过滤、长尾效应、规则、融合、可视化分析 |
+| 金哲欣 | PB17111663 | 多层感知机、协同过滤、长尾效应、规则、融合、可视化分析 |
 | 许世晨 | PB17030846 | 数据预处理、残差神经网络、DFM、CNN、LSTM、SVM |
 | 李纯羽 | PB17111618 | LGB模型、特征工程、数据预处理 |
 
@@ -69,15 +69,89 @@ model = keras.Sequential([
 
 ​		可以看到在某些车型上，朴素多层感知机的预测结果与最优结果相去甚远。
 
-#### 残差神经网络
+#### 残差神经网络 ResNet
 
+##### 概念介绍
 
+​		残差网络是由来自Microsoft Research的4位学者提出的卷积神经网络，在2015年的ImageNet大规模视觉识别竞赛（ImageNet Large Scale Visual Recognition Challenge, ILSVRC）中获得了图像分类和物体识别的优胜。 残差网络的特点是容易优化，并且能够通过增加相当的深度来提高准确率。其内部的残差块使用了跳跃连接，缓解了在深度神经网络中增加深度带来的梯度消失问题。
+
+<img src="/Users/icepear/Documents/Working/CCF-BDCI-Car-Sales-Forecast/Report/resnet.png" alt="resnet" style="zoom: 33%;" />
+
+​		残差神经网络的结构如上图所示，可以看出，残差神经网络与普通神经网络的区别在于，残差神经网络比普通神经网络多了一个将浅层的x与深层的F(x)相加并输出到下一层网络。
+
+​		令x表示输入，F(x)表示残差块在第二层激活函数之前的输出，即 $F(x)=W_2σ(W_1x)$，其中$W_1$和$W_2$表示第一层和第二层的权重，$\sigma$ 表示 ReLU 激活函数。（这里省略了bias），最后残差块的输出是 $\sigma(F(x)+x)$。
+
+　　当没有 shortcut connection（即图中右侧从 x 到 ⨁ 的箭头）时，残差块就是一个普通的 2 层网络。残差块中的网络可以是全连接层，也可以是卷积层。设第二层网络在激活函数之前的输出为 H(x)。如果在该 2 层网络中，最优的输出就是输入 x，那么对于没有 shortcut connection 的网络，就需要将其优化成 $H(x)=x$；对于有 shortcut connection 的网络，即残差块，如果最优输出是 x，则只需要将 $F(x)=H(x)−x$ 优化为 0 即可。后者的优化会比前者简单。这也是残差这一叫法的由来。
+
+​		残差神经网络也有很多变体，比如下图所示的6种变体：
+
+<img src="/Users/icepear/Documents/Working/CCF-BDCI-Car-Sales-Forecast/Report/resnet-variation.png" alt="resnet-variation" style="zoom: 33%;" />
+
+##### 数据划分
+
+​		根据朴素多层感知机的结果和分析，由前4个月预测后4个月的结果效果最好可能是由于数据量引起的，加上了残差神经网络之后，优化被简化了，为了保留周期性的规律，我们决定使用前12个月预测后12个月。这从某种程度上默认了一个假设：2016年到2017年的变化与2017年到2018年的变化相同。事实上经过实际的测试，这种假设确实有它存在的合理性。当然，我们也进行了其他数据划分方式的测试，效果都不如使用前12个月预测后12个月的划分方式。
+
+##### 模型实现
+
+​		我们在朴素多层感知机的基础上，增加了残差神经网络，并将每层的神经元个数做了相应的修改，以适应残差神经网络的连接层。同时我们也测试了不同的连接方式：相加、相乘、合并等。
+
+```python
+input = layers.Input(shape=(input_dim, ))
+dense = layers.Dense(36, activation='sigmoid', kernel_initializer='he_normal')(input)
+dense = layers.Dense(input_dim, kernel_initializer='he_normal')(dense)
+dense = layers.Add()([input, dense])
+dense = layers.Activation('sigmoid')(dense)
+dense = layers.Dense(36, activation='sigmoid', kernel_initializer='he_normal')(dense)
+output = layers.Dense(output_dim)(dense)
+model = keras.Model(input, output)
+model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
+```
+
+##### 结果分析
+
+​		我们将该模型的结果与我们目前得到的最优结果进行可视化对比：（蓝线为最优结果，黄线为当前模型）
+
+![resnet-result](/Users/icepear/Documents/Working/CCF-BDCI-Car-Sales-Forecast/Report/resnet-result.png)
+
+​		前两张图对应的模型刚好是朴素多层感知机中预测结果不好的两个模型，可见残差神经网络对于效果的提升非常巨大。残差神经网络的模型最终的得分在0.45～0.53之间，这个结果已经基本与开源的基于规则的模型持平。
+
+​		后两张图展示的是残差神经网络预测结果相对不准的情况。经过观察和分析，我们发现这些预测不准确的情况都是由于周期性不明显（部分月份周期不规则）导致的。
 
 #### 平稳化处理
 
+##### 概念介绍
 
+​		时间序列的预处理，一方面能够使序列的特征体现得更加明显，利于分析模型的选择；另一方面也使数据满足模型的要求。时间序列往往具有明显的长期趋势和不规则变动叠加于随机波动之上，因此，大部分时间序列都是非平稳的时间序列。
+
+##### 模型实现
+
+​		由于数据集中只存在两年的销量数据，又由于该时间序列以12个月为周期，金融领域数据分析中常用的平稳化方法一阶差分、二阶差分无法应用在这里，因为会丢失第一个月的差分数据，而缺少这个数据将导致我们无法进行预测。
+
+​		这里我们有一个假设，即汽车的销量是存在一个线性增加或线性减少的趋势，并且，每连续的12个月的销量的平均值是稳定的，可以一定程度上反映这个线性的趋势。
+
+​		我们分别计算每连续12个月的平均值，然后使用最小二乘法拟合这个线性趋势，最终对每个车型每个省份减去这个趋势，再将平稳化之后的数据放入神经网络中进行训练拟合。
+
+​		下图为12个月的滑窗平均值（）和最小二乘法拟合的趋势（）：
+
+
+
+##### 结果分析
+
+​		我们将平稳化处理的模型结果（绿线）和没有平稳化处理的结果（黄线）对比：（蓝线为我们得到的最优结果）
+
+![smooth-compare](/Users/icepear/Documents/Working/CCF-BDCI-Car-Sales-Forecast/Report/smooth-compare.png)
+
+​		可以看到，绿线更加接近蓝线，并且更加符合理想当中的情况。
 
 #### 长尾效应处理
+
+##### 概念介绍
+
+
+
+​		但是，我们会发现：每次跑出来的结果会存在负数，而我们只是简单的
+
+##### 结果分析
 
 
 

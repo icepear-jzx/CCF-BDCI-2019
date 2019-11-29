@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.graph_objs as go
 # don't show warning
 pd.set_option('mode.chained_assignment', None)
 
@@ -197,16 +198,16 @@ def show_forecast_compare(col, paths, step_by_step=False):
     # draw
     plt.title('forecasting of all {}s'.format(col))
     if step_by_step:
-        # for item in set(data_set[0][col]):
-        for item in ['3c974920a76ac9c1']:
-            for adcode in list(set(data_set[0]['adcode']))[:1]:
-                for data in data_set:
-                    draw(data.copy(), filter={col: item})
-                plt.axvline(24)
-                # plt.ylim(0, 3)
-                plt.legend(loc='upper left')
-                # show
-                plt.show()
+        for item in set(data_set[0][col]):
+        # for item in ['3c974920a76ac9c1']:
+            # for adcode in list(set(data_set[0]['adcode']))[:1]:
+            for data in data_set:
+                draw(data.copy(), filter={col: item})
+            plt.axvline(24)
+            # plt.ylim(0, 3)
+            plt.legend(loc='upper left')
+            # show
+            plt.show()
     else:
         for item in set(data_set[0][col]):
             for data in data_set:
@@ -250,6 +251,6 @@ def regYear_compare(col, path):
 # show_all_carCommentVolum(col='model')
 # show_all_rate()
 # show_forecast(col='model', path='Results/rmse-60-all-data-mlp-10-10-11:43.csv')
-show_forecast_compare(col='model', paths=['Results/fuse-0.6003.csv', 
-    'Results/mlp7-fuse-0.5463.csv'], step_by_step=True)
+show_forecast_compare(col='model', paths=['Results/lgb-0.6254.csv', 
+    'Results/fuse-0.6005.csv'], step_by_step=True)
 # regYear_compare(col='model', path='Results/fuse-0.5998.csv')

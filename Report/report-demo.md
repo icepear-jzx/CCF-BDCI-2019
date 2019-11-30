@@ -161,7 +161,8 @@ model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
 
 ​		对于处理长尾效应我们尝试了以下几种方法：
 
-		1. 把横纵坐标取对数，拟合线性趋势，原数据减去线性趋势，然后放入神经网络中进行训练，最终结果进行反变换还原。
+1. 把横纵坐标取对数，拟合线性趋势，原数据减去线性趋势，然后放入神经网络中进行训练，最终结果进行反变换还原。
+
   		2. 把销量数据的12个月滑窗平均值拟合成幂律分布/指数分布/正态分布，原销量减去该趋势之后，放入神经网络进行训练，得到结果后再加上该趋势。
   		3. 把销量数据的12个月滑窗平均值拟合成线性趋势，原销量减去线性趋势之后，放入神经网络进行训练，最终结果使用长尾分布进行修正。
 
@@ -184,6 +185,46 @@ model.compile(keras.optimizers.Adam(1e-2), loss=keras.losses.mse)
 ​		可以看到，经过长尾处理之后的结果，更加接近最优结果，其得分大概在0.56～0.57左右，基本赶超了目前已经开源的 LGB 和 XGB 模型。
 
 ### 2. 协同过滤
+
+##### 概念介绍
+
+​		协同过滤是利用集体智慧的一个典型方法。要理解什么是协同过滤，首先想一个简单的问题，如果你现在想看个电影，但你不知道具体看哪部，你会怎么做？大部分的人会问问周围的朋友，看看最近有什么好看的电影推荐，而我们一般更倾向于从口味比较类似的朋友那里得到推荐。这就是协同过滤的核心思想。
+
+​		协同过滤一般是在海量的用户中发掘出一小部分和你品位比较类似的，在协同过滤中，这些用户成为邻居，然后根据他们喜欢的其他东西组织成一个排序的目录作为推荐给你。当然其中有一个核心的问题：
+
+* 如何确定一个用户是不是和你有相似的品位？
+* 如何将邻居们的喜好组织成一个排序的目录？
+
+​        协同过滤相对于集体智慧而言，它从一定程度上保留了个体的特征，就是你的品位偏好，所以它更多可以作为个性化推荐的算法思想。协同过滤推荐算法是诞生最早，并且较为著名的推荐算法。主要的功能是预测和推荐。算法通过对用户历史行为数据的挖掘发现用户的偏好，基于不同的偏好对用户进行群组划分并推荐品味相似的商品。协同过滤推荐算法分为两类，分别是基于用户的协同过滤算法，和基于物品的协同过滤算法。简单的说就是：人以类聚，物以群分。
+
+##### 模型实现
+
+​		在本模型中，我们把每个省份当作用户，把每种车型当成商品。我们假设类似车型的趋势差不多，那么类似的车型就好像类似的商品；同时，我们也假设有些省份对某种车型的喜好程度差不多，那么类似的省份就好像兴趣相似的消费者。输入省份和车型的One-Hot编码向量，经过一层全连接层，使其变成12维的Embedding稠密向量，然后再经过一层全连接层，再将其相乘，输出为12维的预测，对应12个月的销量。
+
+```python
+model = layers.Input(shape=(1, ))
+adcode = layers.Input(shape=(1, ))
+model_embed = layers.Embedding(60, 12, embeddings_initializer='he_normal')(model)
+adcode_embed = layers.Embedding(22, 12, embeddings_initializer='he_normal')(adcode)
+model_embed = layers.Flatten()(model_embed)
+adcode_embed = layers.Flatten()(adcode_embed)
+model_dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(model_embed)
+adcode_dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(adcode_embed)
+dense = layers.Mul()([model_dense, adcode_dense])
+dense = layers.Dense(32, activation='sigmoid', kernel_initializer='he_normal')(dense)
+output = layers.Dense(12)(dense)
+model = keras.Model([model, adcode], output)
+```
+
+​		同时，我们也把多层感知机中对数据的平稳化和长尾处理加入到这个模型中。
+
+##### 结果分析
+
+​		我们把基于协同过滤的模型（黄线）和最好的结果（蓝线）对比：
+
+![cf-result](/Users/icepear/Documents/Working/CCF-BDCI-Car-Sales-Forecast/Report/cf-result.png)
+
+​		可以看到，本模型在周期性比较明显的车型下预测得比较准确，而在周期性不明显、预测更多依赖于前几个月的销量的车型下表现就不佳。我们认为这是由于协同过滤的模型适用于用户喜好稳定、商品受欢迎程度稳定的基础上，然而在本题下，有些省份对车型的偏好并不稳定，车型的流行程度也会随时间变化，所以预测结果相对不准确。
 
 ### 3. DFM
 

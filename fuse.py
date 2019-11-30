@@ -16,12 +16,13 @@ import numpy as np
 # fuse[['id','forecastVolum']].round().astype(int).to_csv('lgb-fuse.csv',encoding='utf8',index=False)
 
 lgb = pd.read_csv('Results/lgb-0.6254.csv')
+lgb_fuse = pd.read_csv('Results/lgb-fuse-0.5718.csv')
 mlp6 = pd.read_csv('Results/mlp6-fuse-0.5664.csv')
-mlp7 = pd.read_csv('Results/mlp7-fuse-0.5463.csv')
-tend = pd.read_csv('Results/tend-fuse-0.5485.csv')
-xgb = pd.read_csv('Results/xgb-0.5705.csv')
+xgb = pd.read_csv('Results/xgb-0.5976.csv')
+fuse6005 = pd.read_csv('Results/fuse-0.6005.csv')
+lgbxgb = pd.read_csv('Results/lgb-xgb-0.6104.csv')
 
-fuse = 0.6 * lgb + 0.2 * xgb + 0.2 * mlp6
+fuse = 0.7 * lgb + 0.3 * lgbxgb
 
 fuse[['id','forecastVolum']].round().astype(int).to_csv('fuse.csv',encoding='utf8',index=False)
 

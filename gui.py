@@ -251,6 +251,6 @@ def regYear_compare(col, path):
 # show_all_carCommentVolum(col='model')
 # show_all_rate()
 # show_forecast(col='model', path='Results/rmse-60-all-data-mlp-10-10-11:43.csv')
-show_forecast_compare(col='model', paths=['Results/lgb-0.6254.csv', 
-    'Results/fuse-0.6005.csv'], step_by_step=True)
+show_forecast_compare(col='model', paths=['Results/yueyueniao-0.6372.csv', 
+    'Results/fuse-0.6283.csv'], step_by_step=True)
 # regYear_compare(col='model', path='Results/fuse-0.5998.csv')

@@ -174,7 +174,7 @@ def get_train_model(df_, m, m_type='lgb',i=0):
     return sub,df[valid_idx]['pred_label']
 
 for month in [25,26,27,28]: 
-    m_type = 'lgb' 
+    m_type = 'xgb' 
     data['n_label'] = np.log1p(data['label'])
     data_df, stat_feat = get_stat_feature(data)#每次都要更新下特征
     num_feat = ['regYear'] + stat_feat

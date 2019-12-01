@@ -47,6 +47,7 @@ tend_y = np.array(tend_y).T
 
 y_pred = np.zeros(shape=(1320, 12), dtype=np.float)
 y = np.hstack([y, y_pred])
+show = False
 # print(y.shape)
 for i in range(0,1320):
     print('fit:', i)
@@ -56,22 +57,24 @@ for i in range(0,1320):
     base_y = line_func(base_x, k, b)
     var = np.abs(y[i][:24] - base_y[:24])
     var = var.mean()
-    show = True
+    # show = True
     if k < 0:
-        para, _ = curve_fit(exp_func, tend_x, tend_y[i]-var, p0=[1, 10000, 0], maxfev = 1000000)
+        # para, _ = curve_fit(exp_func, tend_x, tend_y[i]-var, p0=[1, 10000, 0], maxfev = 1000000)
+        para, _ = curve_fit(exp_func, tend_x, tend_y[i], p0=[1, 10000, 0], maxfev = 1000000)
         print(para)
         lam = para[0]
         a = para[1]
         b = para[2]
         base_y = exp_func(base_x, lam, a, b)
-        # show = True
+        show = True
     elif k > 1:
         # para, _ = curve_fit(normal_func, tend_x, tend_y[i], p0=[10000, -10, 16], maxfev = 1000000)
         # a = para[0]
         # u = para[1]
         # sig = para[2]
         # base_y = normal_func(base_x, a, u, sig)
-        para, _ = curve_fit(power_func, tend_x, tend_y[i] + var, p0=[1, 200], maxfev = 1000000)
+        para, _ = curve_fit(power_func, tend_x, tend_y[i], p0=[1, 200], maxfev = 1000000)
+        # para, _ = curve_fit(power_func, tend_x, tend_y[i] + var, p0=[1, 200], maxfev = 1000000)
         print(para)
         lam = para[0]
         a = para[1]
@@ -83,8 +86,8 @@ for i in range(0,1320):
     # var = np.abs(y[i][:24] - base_y[:24])
     # var = var.mean()
         
-    # upper_y = base_y + var
-    # lower_y = base_y - var
+    upper_y = base_y + var
+    lower_y = base_y - var
 
     for j in range(12):
         # y[i][24+j] = 6 * (base_y[18+j] + base_y[19+j]) - y[i][13+j:24+j].sum()
@@ -98,15 +101,15 @@ for i in range(0,1320):
 
     if show:
         plt.axvline(23)
-        plt.plot(tend_x, tend_y[i])
-        plt.plot(base_x, base_y)
-        # plt.plot(base_x, lower_y)
-        # plt.plot(base_x, upper_y)
         plt.plot(range(36), y[i])
+        plt.plot(tend_x, tend_y[i])
+        plt.plot(range(36), base_y)
+        plt.plot(base_x, lower_y)
+        plt.plot(base_x, upper_y)
         plt.show()
 
-y_result = np.reshape(y[:, 24:28], (1320*4), order='F')
-write_results('Results/tend2', y_result)
+# y_result = np.reshape(y[:, 24:28], (1320*4), order='F')
+# write_results('Results/tend2', y_result)
 
 
 

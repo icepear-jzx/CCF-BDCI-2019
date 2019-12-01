@@ -145,7 +145,7 @@ for month in [25,26,27,28]:
            
     features = num_feat + cate_feat
     print(len(features), len(set(features)))   
-    
+    print(data_df.columns)
     sub,val_pred = get_train_model(data_df, month, m_type)   
     data.loc[(data.regMonth==(month-24))&(data.regYear==2018), 'salesVolume'] = sub['forecastVolum'].values
     data.loc[(data.regMonth==(month-24))&(data.regYear==2018), 'label'      ] = sub['forecastVolum'].values	

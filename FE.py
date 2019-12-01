@@ -75,80 +75,23 @@ for col in ['carCommentVolum','newsReplyVolum','popularity','bt_ry_mean','ad_ry_
     data.loc[(data['regYear'].isin([2017]))&(data['regMonth'].isin([1,2,3,4])), col].values * 1.03).round()
 
 # 每年的新年在第几月份
-data['happyNY'] = 0
-data.loc[(data['regYear'].isin([2016,2018])&data['regMonth'].isin([2])),'happyNY'] = 1
-data.loc[(data['regYear'].isin([2017])&data['regMonth'].isin([1])),'happyNY'] = 1
+data['aroundNY'] = 0
+data.loc[(data['regYear'].isin([2016,2018])&data['regMonth'].isin([1,2,3])),'aroundNY'] = 1
+data.loc[(data['regYear'].isin([2017])&data['regMonth'].isin([1,2])),'aroundNY'] = 1
+data.loc[(data['regYear'].isin([2016])&data['regMonth'].isin([12])),'aroundNY'] = 1
  
 
 # label 下移4月，则测试集填充上了label
-for month in [4]:
-    for col in ['label','carCommentVolum','newsReplyVolum','popularity','bt_ry_mean','ad_ry_mean', 'md_ry_mean','bt_ry_rm_sum','ad_ry_rm_sum','md_ry_rm_sum']:
+for month in [4,12]:
+    for col in ['label','carCommentVolum','newsReplyVolum','popularity','bt_ry_rm_sum','ad_ry_rm_sum','md_ry_rm_sum']:
         shift_feat.append('shift_model_adcode_mt_{}_{}'.format(col,month))
         data['model_adcode_mt_{}'.format(month)] = data['model_adcode_mt'] + month
         data_last = data.loc[~pd.isnull(data['label'])].set_index('model_adcode_mt_{}'.format(month))
         data['shift_model_adcode_mt_{}_{}'.format(col,month)] = data['model_adcode_mt'].map(data_last[col])
 
         data.loc[pd.isnull(data['shift_model_adcode_mt_{}_{}'.format(col,month)]),'shift_model_adcode_mt_{}_{}'.format(col,month)] = (((data.loc[(data.regMonth> 12-month) & (data.regMonth <= 12) & data.regYear.isin([2016]),i].values)/
- data.loc[(data.regMonth> 12 - month) & (data.regMonth <= 12) & data.regYear.isin([2017]),i].values)*
-data.loc[(data.regMonth> 12- month) & (data.regMonth <= 12) & data.regYear.isin([2016]),i].values).round()
-
-################ adpated from yueyueniao  more history information ###################################
-'''
-for month in [1]:
-    for col in ['label','carCommentVolum','newsReplyVolum','popularity']:
-        df = data[['province','bodyType','model','mt',col]].copy()
-        for i in list(range(1, month+4)) + [12]:
-            history = df.copy()
-            history['mt'] += i
-            history.rename(columns={col:'{}_{}m_ago'.format(col,i)},inplace=True)
-            shift_feat.append('{}_{}m_ago'.format(col,i))
-            data = pd.merge(data, history, on=['province','bodyType','model','mt'], how='left')
-            #print(data.columns.values)
-            #data.loc[pd.isnull(data['{}_{}m_ago'.format(col,i)]),'{}_{}m_ago'.format(col,i)] = data.groupby(['province','bodyType','model','regYear','regMonth'],as_index = False)[col].transform('mean')
-
-          
-def getHistoryIncrease(step=1, wind=1, col='salesVolume'):
-        """
-        计算历史涨幅
-        :param: step:月份跨度
-        :param: wind:计算涨幅的月份区间
-        :param: col:计算涨幅的目标列
-        例：step=1,wind=2,计算当月 前第1月 较 前第3月 的涨幅）
-        """
-        if col not in self.unstack_data.keys():
-            res = []
-            bar = tqdm(data['province'].unique(), desc='history increase')
-            for i in bar:
-                for j in data['model'].unique():
-                    msk = (data['province']==i) & (data['model']==j)
-                    df = data[msk].copy().reset_index(drop=True)
-                    df = df[['mt',col]].set_index('mt').T
-                    df['province'] = i
-                    df['model'] = j
-                    res.append(df)
-            res = pd.concat(res).reset_index(drop=True)
-            self.unstack_data[col] = res.copy()
-
-for month in [1,2,3,4]:
-    base_step = month-1 if month-1>0 else 1
-    data = getHistoryIncrease(step=base_step)
-    data = getHistoryIncrease(step=base_step+1)
-    trainset = getHistoryIncrease(step=base_step+2)
-
-    trainset = getHistoryIncrease(step=base_step, wind=2)
-    trainset = getHistoryIncrease(step=base_step+1, wind=2)
-    trainset = getHistoryIncrease(step=base_step+2, wind=2)
-    trainset = getHistoryIncrease(step=base_step, wind=12)
-        
-    trainset = getHistoryIncrease(trainset, step=month, col='popularity')
-    trainset = getHistoryIncrease(trainset, step=month+1, col='popularity')
-    trainset = getHistoryIncrease(trainset, step=month+2, col='popularity')
-
-    trainset = getHistoryIncrease(trainset, step=month, wind=2, col='popularity')
-    trainset = getHistoryIncrease(trainset, step=month+1, wind=2, col='popularity')
-    trainset = getHistoryIncrease(trainset, step=month+2, wind=2, col='popularity')
-'''
-################################## end ##################################################
+ data.loc[(data.regMonth> 12 - month) & (data.regMonth <= 12) & data.regYear.isin([2017]),col].values)*
+data.loc[(data.regMonth> 12- month) & (data.regMonth <= 12) & data.regYear.isin([2016]),col].values).round()
 
 # 根据月份添加权重值
 a = 6; b = 4
@@ -173,11 +116,11 @@ def score(data):
  
 df_lgb = pd.DataFrame({'id': test['id']})
 for col_add in ['ad_ry_mean', 'md_ry_mean', 'bt_ry_mean']:
-    # 取用的字段，用于训练模型
+    # 用于训练模型的特征
     num_feat = shift_feat
-    cate_feat = ['adcode', 'bodyType', 'model', 'regYear', 'regMonth', 'happyNY']
+    cate_feat = ['adcode', 'bodyType', 'model', 'regYear', 'regMonth','aroundNY','weightMonth']
     #features = num_feat + cate_feat + ['weightMonth','ad_ry_rm_sum','md_ry_rm_sum','bt_ry_rm_sum'] + [col_add]  # [ad_ry_mean, md_ry_mean, bt_ry_mean]
-    features = num_feat + cate_feat+['weightMonth']
+    features = num_feat + cate_feat+ [col_add]
 
     train_idx = (data['mt'] <= 20) # 小于等于20月以内的数据作为训练集
     valid_idx = (data['mt'].between(21, 24)) # 21到24个月的数据作为验证集
@@ -221,4 +164,4 @@ sub = pd.DataFrame(columns= ['id', 'forecastVolum'])
 sub['id'] = df_lgb['id']
 sub['forecastVolum']= ((df_lgb['ad_ry_mean']+df_lgb['md_ry_mean'] + df_lgb['bt_ry_mean'])/3).astype(int)
 #sub.set_index('id')
-sub.to_csv('Results/sub_fe7.csv',index = False)
+sub.to_csv('Results/sub_fe9.csv',index = False)

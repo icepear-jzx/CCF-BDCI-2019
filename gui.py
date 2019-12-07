@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-import plotly.graph_objs as go
+# import plotly.graph_objs as go
 # don't show warning
 pd.set_option('mode.chained_assignment', None)
 
@@ -252,5 +252,5 @@ def regYear_compare(col, path):
 # show_all_rate()
 # show_forecast(col='model', path='Results/rmse-60-all-data-mlp-10-10-11:43.csv')
 show_forecast_compare(col='model', paths=['Results/yueyueniao-0.6372.csv', 
-    'Results/fuse-0.6283.csv'], step_by_step=True)
+    'submit.csv'], step_by_step=True)
 # regYear_compare(col='model', path='Results/fuse-0.5998.csv')

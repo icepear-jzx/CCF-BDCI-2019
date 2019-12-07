@@ -21,8 +21,10 @@ mlp6 = pd.read_csv('Results/mlp6-fuse-0.5664.csv')
 xgb = pd.read_csv('Results/xgb-0.5976.csv')
 fuse6005 = pd.read_csv('Results/fuse-0.6005.csv')
 lgbxgb = pd.read_csv('Results/lgb-xgb-0.6104.csv')
+model1 = pd.read_csv('model_1.csv')
+model2 = pd.read_csv('model_2.csv')
 
-fuse = 0.7 * lgb + 0.3 * lgbxgb
+fuse = 0.3 * model1 + 0.7 * model2
 
 fuse[['id','forecastVolum']].round().astype(int).to_csv('fuse.csv',encoding='utf8',index=False)
 
